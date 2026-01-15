@@ -1,9 +1,4 @@
 import type { ComponentType } from 'react';
-import { LoginForm } from '@/components/demo/LoginForm';
-import { PricingCard } from '@/components/demo/PricingCard';
-import { UserProfile } from '@/components/demo/UserProfile';
-import { StatsCard } from '@/components/demo/StatsCard';
-import HomePage from '@/app/page';
 
 // Component registry entry
 export interface RegistryEntry {
@@ -20,40 +15,7 @@ export interface RegistryEntry {
 // It will cause an infinite loop since ComponentBox renders registry components.
 //
 export const componentRegistry: Record<string, RegistryEntry> = {
-  // Pages
-  'page-home': {
-    name: '/',
-    component: HomePage,
-    category: 'Pages',
-    description: 'Home page',
-  },
-  // Components
-  'login-form': {
-    name: 'Login Form',
-    component: LoginForm,
-    category: 'Components',
-    description: 'A sign-in form with email and password fields',
-  },
-  'pricing-card': {
-    name: 'Pricing Card',
-    component: PricingCard,
-    category: 'Components',
-    description: 'A pricing plan card with features list',
-  },
-  'user-profile': {
-    name: 'User Profile',
-    component: UserProfile,
-    category: 'Components',
-    description: 'A user profile card with avatar and details',
-  },
-  'stats-card': {
-    name: 'Stats Dashboard',
-    component: StatsCard,
-    category: 'Components',
-    description: 'A grid of statistics cards with trends',
-  },
-  // Add more components here following the pattern above
-  // See REGISTRY_GUIDELINES.md for detailed instructions
+  // Add components here following the pattern in REGISTRY_GUIDELINES.md
 };
 
 // Helper functions
