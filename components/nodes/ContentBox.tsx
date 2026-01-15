@@ -3,10 +3,10 @@
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Card, CardContent, CardHeader } from '../ui/card';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import type { ContentNodeData } from '../../lib/types';
 

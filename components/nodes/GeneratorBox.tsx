@@ -3,16 +3,16 @@
 import { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { Play, Square, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader } from '../ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '../ui/select';
 import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import type { GeneratorNodeData, AIProvider } from '../../lib/types';

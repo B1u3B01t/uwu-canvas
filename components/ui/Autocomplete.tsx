@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from './command';
+import { Popover, PopoverContent, PopoverAnchor } from './popover';
 import { useAliasResolver, type AliasOption } from '../../hooks/useAliasResolver';
 
 interface AutocompleteTextareaProps {

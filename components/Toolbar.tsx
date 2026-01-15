@@ -2,13 +2,13 @@
 
 import { useReactFlow } from '@xyflow/react';
 import { Plus, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from './ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from './ui/dropdown-menu';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 
 export function Toolbar() {
