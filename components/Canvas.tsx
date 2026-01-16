@@ -32,6 +32,7 @@ export function Canvas() {
   const storeNodes = useCanvasStore((state) => state.nodes);
   const setStoreNodes = useCanvasStore((state) => state.setNodes);
   const selectNode = useCanvasStore((state) => state.selectNode);
+  const removeNode = useCanvasStore((state) => state.removeNode);
   
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes as Node[]);
   const { fitView } = useReactFlow();
@@ -77,9 +78,17 @@ export function Canvas() {
     setStoreNodes(updatedNodes);
   }, [storeNodes, reactFlowNodes, setStoreNodes]);
 
-  // Handle node changes (position, selection, etc.)
+  // Handle node changes (position, selection, removal, etc.)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      // Handle remove changes - sync to Zustand store BEFORE React Flow processes them
+      const removeChanges = changes.filter((change) => change.type === 'remove');
+      removeChanges.forEach((change) => {
+        if (change.type === 'remove') {
+          removeNode(change.id);
+        }
+      });
+
       onNodesChange(changes);
 
       // Sync positions to store when drag ends (triggers debounced auto-save)
@@ -99,7 +108,7 @@ export function Canvas() {
         }
       });
     },
-    [onNodesChange, selectNode, syncPositionsToStore]
+    [onNodesChange, selectNode, removeNode, syncPositionsToStore]
   );
 
   // Fit view on initial load if there are nodes

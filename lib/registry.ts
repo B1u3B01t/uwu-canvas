@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { AudriaApp } from '@/app/audria/AudriaApp';
 
 // Component registry entry
 export interface RegistryEntry {
@@ -15,7 +16,12 @@ export interface RegistryEntry {
 // It will cause an infinite loop since ComponentBox renders registry components.
 //
 export const componentRegistry: Record<string, RegistryEntry> = {
-  // Add components here following the pattern in REGISTRY_GUIDELINES.md
+  'audria': {
+    name: 'Audria',
+    component: AudriaApp,
+    category: 'App',
+    description: 'Mobile app with 3D theme sphere and iOS-style bottom sheet',
+  },
 };
 
 // Helper functions

@@ -48,9 +48,18 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
   const resolveAllAliases = useCanvasStore((state) => state.resolveAllAliases);
+
+  const providerKeys = Object.keys(providersData);
+  const hasProviders = providerKeys.length > 0;
   
-  // Early return if node data not found
-  if (!data) return null;
+  // Get current provider and model, with fallbacks
+  const currentProvider = (data?.provider && providersData[data.provider]) 
+    ? data.provider 
+    : (providerKeys[0] as AIProvider | undefined);
+  const currentProviderData = currentProvider ? providersData[currentProvider] : null;
+  const currentModel = currentProviderData 
+    ? (data?.model && currentProviderData.models.some(m => m.id === data.model) ? data.model : currentProviderData.models[0]?.id)
+    : undefined;
 
   // Fetch available providers on mount
   useEffect(() => {
@@ -67,7 +76,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         
         const providerKeys = Object.keys(providers);
         // Update node to first available provider if current one is not available
-        if (providerKeys.length > 0 && (!data.provider || !providers[data.provider])) {
+        if (data && providerKeys.length > 0 && (!data.provider || !providers[data.provider])) {
           const firstProvider = providerKeys[0] as AIProvider;
           updateNode(id, { 
             provider: firstProvider,
@@ -79,19 +88,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         providersFetched = true;
         setIsLoadingProviders(false);
       });
-  }, []);
-
-  const providerKeys = Object.keys(providersData);
-  const hasProviders = providerKeys.length > 0;
-  
-  // Get current provider and model, with fallbacks
-  const currentProvider = (data.provider && providersData[data.provider]) 
-    ? data.provider 
-    : (providerKeys[0] as AIProvider | undefined);
-  const currentProviderData = currentProvider ? providersData[currentProvider] : null;
-  const currentModel = currentProviderData 
-    ? (data.model && currentProviderData.models.some(m => m.id === data.model) ? data.model : currentProviderData.models[0]?.id)
-    : undefined;
+  }, [data, id, updateNode]);
 
   const handleProviderChange = useCallback((provider: AIProvider) => {
     const models = providersData[provider]?.models;
@@ -104,7 +101,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   }, [id, updateNode, providersData]);
 
   const handleRun = useCallback(async () => {
-    if (data.isRunning) return;
+    if (!data || data.isRunning) return;
     
     setGeneratorRunning(id, true);
     setGeneratorOutput(id, '');
@@ -144,11 +141,14 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
     } finally {
       setGeneratorRunning(id, false);
     }
-  }, [id, data.input, data.isRunning, currentProvider, currentModel, resolveAllAliases, setGeneratorOutput, setGeneratorRunning]);
+  }, [id, data, currentProvider, currentModel, resolveAllAliases, setGeneratorOutput, setGeneratorRunning]);
 
   const handleStop = useCallback(() => {
     setGeneratorRunning(id, false);
   }, [id, setGeneratorRunning]);
+  
+  // Early return if node data not found - AFTER all hooks
+  if (!data) return null;
 
   return (
     <>
