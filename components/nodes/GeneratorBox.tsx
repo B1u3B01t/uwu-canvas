@@ -47,7 +47,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const removeNode = useCanvasStore((state) => state.removeNode);
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
-  const resolveAllAliases = useCanvasStore((state) => state.resolveAllAliases);
+  const buildMessageContent = useCanvasStore((state) => state.buildMessageContent);
 
   const providerKeys = Object.keys(providersData);
   const hasProviders = providerKeys.length > 0;
@@ -102,35 +102,56 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
 
   const handleRun = useCallback(async () => {
     if (!data || data.isRunning) return;
-    
+
     setGeneratorRunning(id, true);
     setGeneratorOutput(id, '');
-    
+
     try {
-      const resolvedInput = resolveAllAliases(data.input);
-      
+      // Build structured message content with file/image parts
+      const contentParts = buildMessageContent(data.input);
+
+      // Check if we have any file/image parts
+      const hasMediaParts = contentParts.some(
+        (part) => part.type === 'image' || part.type === 'file'
+      );
+
       const response = await fetch('/uwu-canvas/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: resolvedInput,
-          provider: currentProvider,
-          model: currentModel,
-        }),
+        body: JSON.stringify(
+          hasMediaParts
+            ? {
+                // Use structured messages format for files/images
+                messages: [
+                  {
+                    role: 'user',
+                    content: contentParts,
+                  },
+                ],
+                provider: currentProvider,
+                model: currentModel,
+              }
+            : {
+                // Use simple prompt format for text-only
+                prompt: contentParts.map((p) => (p.type === 'text' ? p.text : '')).join(''),
+                provider: currentProvider,
+                model: currentModel,
+              }
+        ),
       });
-      
+
       if (!response.ok) throw new Error('Generation failed');
-      
+
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
-      
+
       const decoder = new TextDecoder();
       let output = '';
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         output += chunk;
         setGeneratorOutput(id, output);
@@ -141,7 +162,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
     } finally {
       setGeneratorRunning(id, false);
     }
-  }, [id, data, currentProvider, currentModel, resolveAllAliases, setGeneratorOutput, setGeneratorRunning]);
+  }, [id, data, currentProvider, currentModel, buildMessageContent, setGeneratorOutput, setGeneratorRunning]);
 
   const handleStop = useCallback(() => {
     setGeneratorRunning(id, false);

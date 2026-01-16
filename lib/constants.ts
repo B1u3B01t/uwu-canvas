@@ -18,6 +18,10 @@ export const BOX_DEFAULTS = {
       height: 720,
     },
   },
+  data2ui: {
+    width: 320,
+    height: 220,
+  },
 } as const;
 
 // Node types
@@ -25,6 +29,7 @@ export const NODE_TYPES = {
   GENERATOR: 'generator',
   CONTENT: 'content',
   COMPONENT: 'component',
+  DATA2UI: 'data2ui',
 } as const;
 
 // Alias prefixes
@@ -32,6 +37,7 @@ export const ALIAS_PREFIXES = {
   generator: 'output',
   content: 'con',
   component: 'comp',
+  data2ui: 'data',
 } as const;
 
 // Canvas settings

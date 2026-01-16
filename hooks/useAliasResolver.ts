@@ -5,7 +5,7 @@ import { useCanvasStore } from './useCanvasStore';
 
 export interface AliasOption {
   alias: string;
-  type: 'generator' | 'content' | 'component';
+  type: 'generator' | 'content' | 'component' | 'data2ui';
   nodeId: string;
   label: string;
 }
@@ -26,6 +26,8 @@ export function useAliasResolver() {
         label = `${data.alias} (Content)`;
       } else if (data.type === 'component') {
         label = `${data.alias} (Component: ${data.componentKey || 'none'})`;
+      } else if (data.type === 'data2ui') {
+        label = `${data.alias} (Data2UI: ${data.outputPath || 'none'})`;
       }
       
       return {

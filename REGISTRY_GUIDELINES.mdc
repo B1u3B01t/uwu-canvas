@@ -1,0 +1,22 @@
+---
+alwaysApply: false
+---
+},
+```
+
+## Troubleshooting
+
+### Component Not Showing
+- Check import path is correct
+- Verify component is exported from its file
+- Ensure registry key matches what's being requested
+
+### Component Crashes Canvas
+- Component may have required props - add defaults or wrapper
+- Check for context dependencies (providers not available)
+- Look for client/server component mismatches
+
+### Styling Issues
+- Component styles may conflict with canvas
+- Consider wrapping in a container with `isolate` class
+- Check for global styles affecting the component

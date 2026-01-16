@@ -17,6 +17,7 @@ import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { getRegistryKeys, getComponentByKey } from '../../lib/registry';
 import { BOX_DEFAULTS } from '../../lib/constants';
 import type { ComponentNodeData } from '../../lib/types';
+import Script from 'next/script';
 
 function ComponentBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);

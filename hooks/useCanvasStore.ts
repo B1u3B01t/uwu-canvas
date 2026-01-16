@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, AliasMap } from '../lib/types';
+import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, AliasMap, MessageContentPart } from '../lib/types';
 import { BOX_DEFAULTS, ALIAS_PREFIXES } from '../lib/constants';
 
 const STORAGE_KEY = 'uwu-canvas-storage';
@@ -16,10 +16,12 @@ interface CanvasStore {
     generator: number;
     content: number;
     component: number;
+    data2ui: number;
   };
 
   // Node actions
-  addNode: (type: 'generator' | 'content' | 'component', position?: { x: number; y: number }) => void;
+  addNode: (type: 'generator' | 'content' | 'component' | 'data2ui', position?: { x: number; y: number }) => void;
+  addContentNodeWithFile: (fileData: { fileName: string; fileType: string; fileSize: number; data: string }, position?: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<CanvasNode['data']>) => void;
   removeNode: (nodeId: string) => void;
   setNodes: (nodes: CanvasNode[]) => void;
@@ -31,6 +33,8 @@ interface CanvasStore {
   getAliasMap: () => AliasMap;
   resolveAlias: (alias: string) => string;
   resolveAllAliases: (text: string) => string;
+  buildMessageContent: (text: string) => MessageContentPart[];
+  getNodeByAlias: (alias: string) => CanvasNode | undefined;
   
   // Generator specific
   setGeneratorOutput: (nodeId: string, output: string) => void;
@@ -49,7 +53,7 @@ const generateId = () => `node-${Date.now()}-${Math.random().toString(36).substr
 // Load initial state from localStorage
 const getInitialState = () => {
   if (typeof window === 'undefined') {
-    return { nodes: [], counters: { generator: 0, content: 0, component: 0 } };
+    return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
   }
   
   try {
@@ -58,14 +62,14 @@ const getInitialState = () => {
       const parsed = JSON.parse(stored);
       return {
         nodes: parsed.nodes || [],
-        counters: parsed.counters || { generator: 0, content: 0, component: 0 },
+        counters: parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 },
       };
     }
   } catch {
     // Ignore parse errors
   }
   
-  return { nodes: [], counters: { generator: 0, content: 0, component: 0 } };
+  return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
 };
 
 const initialState = getInitialState();
@@ -99,9 +103,9 @@ export const useCanvasStore = create<CanvasStore>()(
     const { counters, nodes } = get();
     const newCount = counters[type] + 1;
     const id = generateId();
-    
+
     let newNode: CanvasNode;
-    
+
     switch (type) {
       case 'generator':
         newNode = {
@@ -150,11 +154,51 @@ export const useCanvasStore = create<CanvasStore>()(
           } as ComponentNodeData,
         };
         break;
+      case 'data2ui':
+        newNode = {
+          id,
+          type: 'data2ui',
+          position,
+          data: {
+            type: 'data2ui',
+            alias: `${ALIAS_PREFIXES.data2ui}-${newCount}`,
+            sourceAlias: '',
+            outputPath: '',
+            width: BOX_DEFAULTS.data2ui.width,
+            height: BOX_DEFAULTS.data2ui.height,
+          } as Data2UINodeData,
+        };
+        break;
     }
-    
+
     set({
       nodes: [...nodes, newNode],
       counters: { ...counters, [type]: newCount },
+      selectedNodeId: id,
+    });
+  },
+
+  addContentNodeWithFile: (fileData, position = { x: 100, y: 100 }) => {
+    const { counters, nodes } = get();
+    const newCount = counters.content + 1;
+    const id = generateId();
+
+    const newNode: CanvasNode = {
+      id,
+      type: 'content',
+      position,
+      data: {
+        type: 'content',
+        alias: `${ALIAS_PREFIXES.content}-${newCount}`,
+        fileData,
+        width: BOX_DEFAULTS.content.width,
+        height: BOX_DEFAULTS.content.height,
+      } as ContentNodeData,
+    };
+
+    set({
+      nodes: [...nodes, newNode],
+      counters: { ...counters, content: newCount },
       selectedNodeId: id,
     });
   },
@@ -191,13 +235,16 @@ export const useCanvasStore = create<CanvasStore>()(
     nodes.forEach((node) => {
       const data = node.data;
       let value = '';
-      
+
       if (data.type === 'generator') {
         value = data.output;
       } else if (data.type === 'content') {
-        value = data.content;
+        // For content nodes with files, use filename; otherwise use text content
+        value = data.fileData ? `[File: ${data.fileData.fileName}]` : (data.content || '');
       } else if (data.type === 'component') {
         value = `[Component: ${data.componentKey}]`;
+      } else if (data.type === 'data2ui') {
+        value = `[Data2UI: ${data.outputPath}]`;
       }
       
       map[data.alias] = {
@@ -220,6 +267,138 @@ export const useCanvasStore = create<CanvasStore>()(
     return text.replace(/@([\w-]+)/g, (match, alias) => {
       return map[alias]?.value ?? match;
     });
+  },
+
+  getNodeByAlias: (alias) => {
+    const { nodes } = get();
+    return nodes.find((node) => node.data.alias === alias);
+  },
+
+  buildMessageContent: (text) => {
+    const { nodes } = get();
+    const parts: MessageContentPart[] = [];
+
+    // Find all @alias references and their positions
+    const aliasRegex = /@([\w-]+)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = aliasRegex.exec(text)) !== null) {
+      const alias = match[1];
+      const matchStart = match.index;
+
+      // Add text before this match
+      if (matchStart > lastIndex) {
+        const textBefore = text.slice(lastIndex, matchStart);
+        if (textBefore.trim()) {
+          parts.push({ type: 'text', text: textBefore });
+        }
+      }
+
+      // Find the referenced node
+      const referencedNode = nodes.find((n) => n.data.alias === alias);
+
+      if (referencedNode) {
+        const data = referencedNode.data;
+
+        if (data.type === 'content') {
+          if (data.fileData) {
+            const { fileType, data: base64Data, fileName } = data.fileData;
+
+            // Handle different file types according to AI SDK capabilities
+            if (fileType.startsWith('image/')) {
+              // Images: use image part
+              parts.push({
+                type: 'image',
+                image: base64Data,
+                mimeType: fileType,
+              });
+            } else if (fileType === 'application/pdf') {
+              // PDFs: use file part
+              parts.push({
+                type: 'file',
+                data: base64Data,
+                mimeType: fileType,
+              });
+            } else if (fileType.startsWith('text/') || fileType === 'application/json') {
+              // Text files: decode and include as text
+              try {
+                const textContent = atob(base64Data);
+                parts.push({
+                  type: 'text',
+                  text: `[File: ${fileName}]\n${textContent}`,
+                });
+              } catch {
+                parts.push({
+                  type: 'text',
+                  text: `[File: ${fileName} - unable to decode]`,
+                });
+              }
+            } else if (
+              fileType.startsWith('audio/') ||
+              fileType.includes('excel') ||
+              fileType.includes('spreadsheet') ||
+              fileType.includes('word') ||
+              fileType.includes('document')
+            ) {
+              // Audio and document files: use file part
+              parts.push({
+                type: 'file',
+                data: base64Data,
+                mimeType: fileType,
+              });
+            } else {
+              // Unsupported file types: add as text placeholder
+              parts.push({
+                type: 'text',
+                text: `[Attached file: ${fileName} (${fileType})]`,
+              });
+            }
+          } else {
+            // Text content box
+            parts.push({
+              type: 'text',
+              text: data.content || '',
+            });
+          }
+        } else if (data.type === 'generator') {
+          // Generator output
+          parts.push({
+            type: 'text',
+            text: data.output || '',
+          });
+        } else {
+          // Other node types - just include as text placeholder
+          parts.push({
+            type: 'text',
+            text: `@${alias}`,
+          });
+        }
+      } else {
+        // Alias not found - keep as is
+        parts.push({
+          type: 'text',
+          text: `@${alias}`,
+        });
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text after last match
+    if (lastIndex < text.length) {
+      const remainingText = text.slice(lastIndex);
+      if (remainingText.trim()) {
+        parts.push({ type: 'text', text: remainingText });
+      }
+    }
+
+    // If no parts were created (no aliases), just return the whole text
+    if (parts.length === 0 && text.trim()) {
+      parts.push({ type: 'text', text });
+    }
+
+    return parts;
   },
 
   setGeneratorOutput: (nodeId, output) => {
@@ -255,11 +434,11 @@ export const useCanvasStore = create<CanvasStore>()(
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        set({
-          nodes: parsed.nodes || [],
-          counters: parsed.counters || { generator: 0, content: 0, component: 0 },
-        });
+      const parsed = JSON.parse(stored);
+      set({
+        nodes: parsed.nodes || [],
+        counters: parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 },
+      });
       }
     } catch {
       // Ignore parse errors
@@ -270,7 +449,7 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: [],
       selectedNodeId: null,
-      counters: { generator: 0, content: 0, component: 0 },
+      counters: { generator: 0, content: 0, component: 0, data2ui: 0 },
     });
   },
 })));

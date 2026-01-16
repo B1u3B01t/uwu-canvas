@@ -2,12 +2,13 @@
 
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { X } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
+import { fileUtils } from '../../lib/utils';
 import type { ContentNodeData } from '../../lib/types';
 
 function ContentBoxComponent({ id, selected }: NodeProps) {
@@ -71,12 +72,43 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
           </Button>
         </CardHeader>
         <CardContent className="h-[calc(100%-48px)] px-3 pb-3">
-          <Textarea
-            value={data.content}
-            onChange={(e) => updateNode(id, { content: e.target.value })}
-            placeholder="Enter content here..."
-            className="h-full resize-none text-xs"
-          />
+          {data.fileData ? (
+            <div className="h-full flex flex-col items-center justify-center space-y-3">
+              <div className="text-4xl">
+                {fileUtils.getFileIcon(data.fileData.fileType)}
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-sm truncate max-w-full" title={data.fileData.fileName}>
+                  {data.fileData.fileName}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {fileUtils.formatFileSize(data.fileData.fileSize)}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => {
+                  // Create download link
+                  const link = document.createElement('a');
+                  link.href = `data:${data.fileData.fileType};base64,${data.fileData.data}`;
+                  link.download = data.fileData.fileName;
+                  link.click();
+                }}
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Download
+              </Button>
+            </div>
+          ) : (
+            <Textarea
+              value={data.content || ''}
+              onChange={(e) => updateNode(id, { content: e.target.value })}
+              placeholder="Enter content here..."
+              className="h-full resize-none text-xs"
+            />
+          )}
         </CardContent>
       </Card>
     </>

@@ -1,61 +1,66 @@
 'use client';
 
+import { useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { Plus, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from './ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { useCanvasStore } from '../hooks/useCanvasStore';
+
+const BOX_TYPES = [
+  { type: 'generator' as const, label: 'Generator', color: 'blue' },
+  { type: 'content' as const, label: 'Content', color: 'green' },
+  { type: 'component' as const, label: 'Component', color: 'purple' },
+  { type: 'data2ui' as const, label: 'Data2UI', color: 'orange' },
+] as const;
 
 export function Toolbar() {
-  const { zoomIn, zoomOut, fitView, getViewport } = useReactFlow();
-  const addNode = useCanvasStore((state) => state.addNode);
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const dragRef = useRef<{ type: 'generator' | 'content' | 'component' | 'data2ui' | null }>({ type: null });
 
-  const handleAddNode = (type: 'generator' | 'content' | 'component') => {
-    const viewport = getViewport();
-    // Add node near the center of the current viewport
-    const position = {
-      x: (-viewport.x + 400) / viewport.zoom,
-      y: (-viewport.y + 200) / viewport.zoom,
-    };
-    addNode(type, position);
+  const handleDragStart = (e: React.DragEvent, type: 'generator' | 'content' | 'component' | 'data2ui') => {
+    dragRef.current.type = type;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/reactflow', type);
+    // Add a visual indicator
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+    }
+  };
+
+  const handleDragEnd = () => {
+    dragRef.current.type = null;
   };
 
   return (
     <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-      {/* Add Box Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2 bg-white shadow-sm">
-            <Plus className="h-4 w-4" />
-            Add Box
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[120px]">
-          <DropdownMenuItem 
-            onClick={() => handleAddNode('generator')}
-            className="justify-center text-sm font-medium hover:bg-blue-500 hover:text-white focus:bg-blue-500 focus:text-white"
+      {/* Draggable Box Labels */}
+      <div className="flex items-center gap-2 rounded-md border bg-white p-1.5 shadow-sm">
+        {BOX_TYPES.map(({ type, label, color }) => (
+          <div
+            key={type}
+            draggable
+            onDragStart={(e) => handleDragStart(e, type)}
+            onDragEnd={handleDragEnd}
+            className={`
+              cursor-grab active:cursor-grabbing
+              px-3 py-1.5 rounded-sm
+              text-sm font-medium
+              transition-all duration-150
+              select-none
+              ${
+                color === 'blue'
+                  ? 'bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white focus:bg-blue-500 focus:text-white'
+                  : color === 'green'
+                  ? 'bg-green-50 text-green-600 hover:bg-green-500 hover:text-white focus:bg-green-500 focus:text-white'
+                  : color === 'purple'
+                  ? 'bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white focus:bg-purple-500 focus:text-white'
+                  : 'bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white focus:bg-orange-500 focus:text-white'
+              }
+            `}
           >
-            Generator
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleAddNode('content')}
-            className="justify-center text-sm font-medium hover:bg-green-500 hover:text-white focus:bg-green-500 focus:text-white"
-          >
-            Content
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleAddNode('component')}
-            className="justify-center text-sm font-medium hover:bg-purple-500 hover:text-white focus:bg-purple-500 focus:text-white"
-          >
-            Component
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {label}
+          </div>
+        ))}
+      </div>
 
       {/* Zoom Controls */}
       <div className="flex items-center gap-1 rounded-md border bg-white p-1 shadow-sm">
