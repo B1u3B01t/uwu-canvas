@@ -123,7 +123,7 @@ export function Canvas() {
     }
   }, []);
 
-  // Handle drag and drop
+  // Handle file drag and drop
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
@@ -133,13 +133,13 @@ export function Canvas() {
     async (event: React.DragEvent) => {
       event.preventDefault();
 
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      // Check if files are being dropped
+      // Only handle file drops
       if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
         // Handle file drops
         const files = Array.from(event.dataTransfer.files);
 
@@ -171,23 +171,9 @@ export function Canvas() {
             console.error('Failed to process dropped file:', error);
           }
         }
-      } else {
-        // Handle node type drops (existing functionality)
-        const type = event.dataTransfer.getData('application/reactflow') as
-          | 'generator'
-          | 'content'
-          | 'component'
-          | 'data2ui'
-          | '';
-
-        if (!type || !['generator', 'content', 'component', 'data2ui'].includes(type)) {
-          return;
-        }
-
-        addNode(type as 'generator' | 'content' | 'component' | 'data2ui', position);
       }
     },
-    [screenToFlowPosition, addNode, addContentNodeWithFile]
+    [screenToFlowPosition, addContentNodeWithFile]
   );
 
   return (

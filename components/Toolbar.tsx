@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useCanvasStore } from '../hooks/useCanvasStore';
 
 const BOX_TYPES = [
   { type: 'generator' as const, label: 'Generator', color: 'blue' },
@@ -13,35 +13,34 @@ const BOX_TYPES = [
 ] as const;
 
 export function Toolbar() {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const dragRef = useRef<{ type: 'generator' | 'content' | 'component' | 'data2ui' | null }>({ type: null });
+  const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow();
+  const addNode = useCanvasStore((state) => state.addNode);
 
-  const handleDragStart = (e: React.DragEvent, type: 'generator' | 'content' | 'component' | 'data2ui') => {
-    dragRef.current.type = type;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/reactflow', type);
-    // Add a visual indicator
-    if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+  const handleAddNode = (type: 'generator' | 'content' | 'component' | 'data2ui') => {
+    // Calculate position at center of viewport
+    const viewport = document.querySelector('.react-flow__viewport');
+    if (viewport) {
+      const rect = viewport.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const position = screenToFlowPosition({ x: centerX, y: centerY });
+      addNode(type, position);
+    } else {
+      // Fallback to default position if viewport not found
+      addNode(type);
     }
-  };
-
-  const handleDragEnd = () => {
-    dragRef.current.type = null;
   };
 
   return (
     <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-      {/* Draggable Box Labels */}
+      {/* Clickable Box Buttons */}
       <div className="flex items-center gap-2 rounded-md border bg-white p-1.5 shadow-sm">
         {BOX_TYPES.map(({ type, label, color }) => (
-          <div
+          <button
             key={type}
-            draggable
-            onDragStart={(e) => handleDragStart(e, type)}
-            onDragEnd={handleDragEnd}
+            onClick={() => handleAddNode(type)}
             className={`
-              cursor-grab active:cursor-grabbing
+              cursor-pointer
               px-3 py-1.5 rounded-sm
               text-sm font-medium
               transition-all duration-150
@@ -58,7 +57,7 @@ export function Toolbar() {
             `}
           >
             {label}
-          </div>
+          </button>
         ))}
       </div>
 
