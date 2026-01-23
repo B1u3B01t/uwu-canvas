@@ -1,17 +1,17 @@
 // Default sizes for different box types
 export const BOX_DEFAULTS = {
   generator: {
-    width: 320,
-    height: 400,
+    width: 340,
+    height: 340,
   },
   content: {
     width: 280,
-    height: 200,
+    height: 170,
   },
   component: {
     mobile: {
-      width: 390,
-      height: 844,
+      width: 402,
+      height: 874,
     },
     laptop: {
       width: 1280,
@@ -20,7 +20,7 @@ export const BOX_DEFAULTS = {
   },
   data2ui: {
     width: 320,
-    height: 220,
+    height: 190,
   },
 } as const;
 

@@ -2,7 +2,7 @@
 
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { X, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -21,7 +21,6 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
   });
   
   const updateNode = useCanvasStore((state) => state.updateNode);
-  const removeNode = useCanvasStore((state) => state.removeNode);
   
   // Early return if node data not found
   if (!data) return null;
@@ -39,10 +38,10 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <Card 
-        className="shadow-md transition-shadow hover:shadow-lg"
+        className="bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
         style={{ width: data.width, height: data.height }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-3">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
           <div className="flex items-center gap-2">
             {isEditingAlias ? (
               <Input
@@ -55,25 +54,17 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
               />
             ) : (
               <span
-                className="cursor-pointer rounded bg-green-50 px-2 py-0.5 font-mono text-xs text-green-600 hover:bg-green-100"
+                className="cursor-pointer rounded-lg bg-green-50 px-2 py-0.5 font-mono text-xs text-green-600 hover:bg-green-100"
                 onClick={() => setIsEditingAlias(true)}
               >
                 @{data.alias}
               </span>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => removeNode(id)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
         </CardHeader>
-        <CardContent className="h-[calc(100%-48px)] px-3 pb-3">
+        <CardContent className="h-[calc(100%-40px)] px-2 pb-2">
           {data.fileData ? (
-            <div className="h-full flex flex-col items-center justify-center space-y-3">
+            <div className="h-full flex flex-col items-center justify-center space-y-2">
               <div className="text-4xl">
                 {fileUtils.getFileIcon(data.fileData.fileType)}
               </div>
@@ -106,7 +97,7 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
               value={data.content || ''}
               onChange={(e) => updateNode(id, { content: e.target.value })}
               placeholder="Enter content here..."
-              className="h-full resize-none text-xs"
+              className="h-full resize-none text-xs bg-white"
             />
           )}
         </CardContent>

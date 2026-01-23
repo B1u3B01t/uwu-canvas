@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Play, Square, X } from 'lucide-react';
+import { Play, Square } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -44,7 +44,6 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   });
   
   const updateNode = useCanvasStore((state) => state.updateNode);
-  const removeNode = useCanvasStore((state) => state.removeNode);
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
   const buildMessageContent = useCanvasStore((state) => state.buildMessageContent);
@@ -184,10 +183,10 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <Card 
-        className="shadow-md transition-shadow hover:shadow-lg"
+        className="bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
         style={{ width: data.width, height: data.height }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-3">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
           <div className="flex items-center gap-2">
             {isEditingAlias ? (
               <Input
@@ -200,7 +199,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
               />
             ) : (
               <span
-                className="cursor-pointer rounded bg-blue-50 px-2 py-0.5 font-mono text-xs text-blue-600 hover:bg-blue-100"
+                className="cursor-pointer rounded-lg bg-blue-50 px-2 py-0.5 font-mono text-xs text-blue-600 hover:bg-blue-100"
                 onClick={() => setIsEditingAlias(true)}
               >
                 @{data.alias}
@@ -210,7 +209,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
             {isLoadingProviders ? (
               <span className="text-[10px] text-muted-foreground">...</span>
             ) : !hasProviders ? (
-              <span className="rounded-sm bg-orange-100 px-1.5 py-0.5 text-[10px] text-orange-600">
+              <span className="rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] text-orange-600">
                 No provider in env
               </span>
             ) : currentProvider && currentProviderData ? (
@@ -220,7 +219,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                   onValueChange={(value) => handleProviderChange(value as AIProvider)}
                   disabled={data.isRunning}
                 >
-                  <SelectTrigger className="h-5 w-[70px] border-none bg-muted/50 px-1.5 text-[10px]">
+                  <SelectTrigger className="h-5 w-[80px] border-none bg-muted/50 px-1.5 text-[10px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,7 +235,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                   onValueChange={(value) => updateNode(id, { model: value })}
                   disabled={data.isRunning}
                 >
-                  <SelectTrigger className="h-5 w-[90px] border-none bg-muted/50 px-1.5 text-[10px]">
+                  <SelectTrigger className="h-5 w-[100px] border-none bg-muted/50 px-1.5 text-[10px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -250,55 +249,39 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
               </>
             ) : null}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => removeNode(id)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
         </CardHeader>
-        <CardContent className="flex h-[calc(100%-48px)] flex-col gap-2 px-3 pb-3">
+        <CardContent className="flex h-[calc(100%-40px)] flex-col gap-1.5 px-2 pb-2">
           {/* Input Section */}
           <div className="flex-shrink-0">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Input</label>
+            <div className="flex items-center justify-between mb-0.5">
+              <label className="text-xs font-medium text-muted-foreground">Input</label>
+              <Button
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={data.isRunning ? handleStop : handleRun}
+                variant={data.isRunning ? 'destructive' : 'default'}
+                disabled={!hasProviders || isLoadingProviders}
+              >
+                {data.isRunning ? (
+                  <Square className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
             <AutocompleteTextarea
               value={data.input}
               onChange={(value) => updateNode(id, { input: value })}
               placeholder="Enter prompt... Use @alias to reference other boxes"
-              className="min-h-[80px] text-xs"
+              className="min-h-[60px] text-xs"
               disabled={data.isRunning}
             />
           </div>
           
-          {/* Run Button */}
-          <div className="flex-shrink-0">
-            <Button
-              size="sm"
-              className="w-full gap-2"
-              onClick={data.isRunning ? handleStop : handleRun}
-              variant={data.isRunning ? 'destructive' : 'default'}
-              disabled={!hasProviders || isLoadingProviders}
-            >
-              {data.isRunning ? (
-                <>
-                  <Square className="h-3.5 w-3.5" />
-                  Stop
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5" />
-                  Run
-                </>
-              )}
-            </Button>
-          </div>
-          
           {/* Output Section */}
           <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Output</label>
-            <div className="flex-1 overflow-auto rounded-md border bg-muted/30 p-2">
+            <label className="mb-0.5 block text-xs font-medium text-muted-foreground">Output</label>
+            <div className="flex-1 overflow-auto rounded-lg border bg-white p-1.5">
               {data.output ? (
                 <pre className="whitespace-pre-wrap text-xs">{data.output}</pre>
               ) : (

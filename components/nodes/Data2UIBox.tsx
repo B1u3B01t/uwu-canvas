@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { X, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
-import type { Data2UINodeData } from '../../lib/types';
+import type { Data2UINodeData, GeneratorNodeData } from '../../lib/types';
 
 // Type for recent memories format
 interface Memory {
@@ -99,6 +99,9 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   const [jsonFiles, setJsonFiles] = useState<string[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   
+  // Track previous isRunning state of source generator for auto-apply
+  const prevSourceIsRunningRef = useRef<boolean | null>(null);
+  
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
     const node = state.nodes.find((n) => n.id === id);
@@ -106,7 +109,6 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   });
   
   const updateNode = useCanvasStore((state) => state.updateNode);
-  const removeNode = useCanvasStore((state) => state.removeNode);
   const getAliasMap = useCanvasStore((state) => state.getAliasMap);
 
   // Fetch JSON files on mount - must be before early return
@@ -131,17 +133,27 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
     .filter(([_, info]) => info.type === 'generator' || info.type === 'content')
     .map(([alias]) => alias);
   
-  // Early return if node data not found - AFTER all hooks
-  if (!data) return null;
-
-  const handleApply = async () => {
+  // Watch source generator node reactively using store selector
+  const sourceGeneratorData = useCanvasStore((state) => {
+    if (!data?.sourceAlias) return null;
+    const sourceNode = state.nodes.find((n) => n.data.alias === data.sourceAlias);
+    if (sourceNode?.data.type === 'generator') {
+      return sourceNode.data as GeneratorNodeData;
+    }
+    return null;
+  });
+  
+  // Define handleApply using useCallback so it can be used in useEffect
+  const handleApply = useCallback(async () => {
     if (!data || !data.sourceAlias || !data.outputPath) {
       setApplyStatus('error');
       setErrorMessage('Please select a source and output file');
       return;
     }
 
-    const sourceInfo = aliasMap[data.sourceAlias];
+    // Refresh alias map to get latest values
+    const currentAliasMap = getAliasMap();
+    const sourceInfo = currentAliasMap[data.sourceAlias];
     if (!sourceInfo) {
       setApplyStatus('error');
       setErrorMessage('Source alias not found');
@@ -206,7 +218,37 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
     } finally {
       setIsApplying(false);
     }
-  };
+  }, [data, getAliasMap]);
+  
+  // Auto-apply when generator finishes (isRunning goes from true to false)
+  useEffect(() => {
+    if (!data || !data.sourceAlias || !data.outputPath || !sourceGeneratorData) {
+      // Reset tracking if source is not available
+      prevSourceIsRunningRef.current = null;
+      return;
+    }
+    
+    const currentIsRunning = sourceGeneratorData.isRunning;
+    const prevIsRunning = prevSourceIsRunningRef.current;
+    
+    // Check if generation just finished (transition from true to false)
+    if (prevIsRunning === true && currentIsRunning === false) {
+      // Generation just completed - auto-apply if there's output
+      const sourceValue = sourceGeneratorData.output;
+      if (sourceValue && sourceValue.trim() !== '') {
+        // Small delay to ensure output is fully set
+        setTimeout(() => {
+          handleApply();
+        }, 100);
+      }
+    }
+    
+    // Update previous state
+    prevSourceIsRunningRef.current = currentIsRunning;
+  }, [data?.sourceAlias, data?.outputPath, sourceGeneratorData?.isRunning, sourceGeneratorData?.output, handleApply]);
+  
+  // Early return if node data not found - AFTER all hooks
+  if (!data) return null;
 
   return (
     <>
@@ -221,10 +263,10 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <Card 
-        className="shadow-md transition-shadow hover:shadow-lg"
+        className="bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
         style={{ width: data.width, height: data.height }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-3">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
           <div className="flex items-center gap-2">
             {isEditingAlias ? (
               <Input
@@ -237,25 +279,17 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
               />
             ) : (
               <span
-                className="cursor-pointer rounded bg-orange-50 px-2 py-0.5 font-mono text-xs text-orange-600 hover:bg-orange-100"
+                className="cursor-pointer rounded-lg bg-orange-50 px-2 py-0.5 font-mono text-xs text-orange-600 hover:bg-orange-100"
                 onClick={() => setIsEditingAlias(true)}
               >
                 @{data.alias}
               </span>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => removeNode(id)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
         </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-3 pb-3">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2 pb-2">
           {/* Source -> Output in one line */}
-          <div className="flex-shrink-0 flex items-center gap-2">
+          <div className="flex-shrink-0 flex items-center gap-1.5">
             <div className="flex-1 min-w-0">
               <Select
                 value={data.sourceAlias}
@@ -331,10 +365,10 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
           </div>
 
           {/* Status Display - Scrollable area */}
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
             {applyStatus === 'error' && errorMessage && (
-              <div className="flex-shrink-0 rounded-md bg-red-50 border border-red-200 p-2">
-                <div className="flex items-start gap-2">
+              <div className="flex-shrink-0 rounded-lg bg-red-50 border border-red-200 p-1.5">
+                <div className="flex items-start gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5 text-red-600 mt-0.5 flex-shrink-0" />
                   <p className="text-[10px] text-red-600">{errorMessage}</p>
                 </div>
@@ -342,7 +376,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
             )}
             
             {data.sourceAlias && data.outputPath && applyStatus !== 'error' && (
-              <div className="flex-shrink-0 rounded-md bg-muted/30 p-2">
+              <div className="flex-shrink-0 rounded-lg bg-muted/30 p-1.5">
                 <p className="text-[10px] text-muted-foreground">
                   <span className="font-mono">@{data.sourceAlias}</span> →{' '}
                   <span className="font-mono">{data.outputPath}</span>

@@ -2,7 +2,7 @@
 
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { X, Smartphone, Monitor } from 'lucide-react';
+import { Smartphone, Monitor } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -29,7 +29,6 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   });
   
   const updateNode = useCanvasStore((state) => state.updateNode);
-  const removeNode = useCanvasStore((state) => state.removeNode);
   
   // Early return if node data not found
   if (!data) return null;
@@ -61,10 +60,10 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <Card 
-        className="flex flex-col shadow-md transition-shadow hover:shadow-lg"
+        className="flex flex-col bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
         style={{ width: data.width, height: data.height }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-3">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
           <div className="flex items-center gap-2">
             {isEditingAlias ? (
               <Input
@@ -77,7 +76,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
               />
             ) : (
               <span
-                className="cursor-pointer rounded bg-purple-50 px-2 py-0.5 font-mono text-xs text-purple-600 hover:bg-purple-100"
+                className="cursor-pointer rounded-lg bg-purple-50 px-2 py-0.5 font-mono text-xs text-purple-600 hover:bg-purple-100"
                 onClick={() => setIsEditingAlias(true)}
               >
                 @{data.alias}
@@ -109,7 +108,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
               </SelectContent>
             </Select>
             {/* View Mode Toggle */}
-            <div className="flex rounded-sm border">
+            <div className="flex rounded-md border">
               <Button
                 variant={data.viewMode === 'mobile' ? 'secondary' : 'ghost'}
                 size="icon"
@@ -128,22 +127,15 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
               </Button>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => removeNode(id)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col gap-2 overflow-hidden px-3 pb-3">
+        <CardContent className="flex flex-1 flex-col gap-1.5 overflow-hidden px-2 pb-2">
           {/* Component Render Area - iframe for proper viewport simulation */}
-          <div className="flex-1 overflow-hidden rounded-xl border bg-white">
+          <div className="flex-1 overflow-hidden rounded-2xl border bg-white">
             {data.componentKey && selectedComponent ? (
               <iframe
                 src={`/uwu-canvas/preview/${data.componentKey}`}
                 className="h-full w-full border-0"
+                style={{ width: '100%', height: '100%' }}
                 title={selectedComponent.name}
               />
             ) : (
