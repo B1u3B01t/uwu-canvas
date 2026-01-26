@@ -3,9 +3,7 @@
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { Smartphone, Monitor } from 'lucide-react';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader } from '../ui/card';
 import {
   Select,
   SelectContent,
@@ -17,19 +15,18 @@ import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { getRegistryKeys, getComponentByKey } from '../../lib/registry';
 import { BOX_DEFAULTS } from '../../lib/constants';
 import type { ComponentNodeData } from '../../lib/types';
-import Script from 'next/script';
 
 function ComponentBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
-  
+
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
     const node = state.nodes.find((n) => n.id === id);
     return node?.data as ComponentNodeData | undefined;
   });
-  
+
   const updateNode = useCanvasStore((state) => state.updateNode);
-  
+
   // Early return if node data not found
   if (!data) return null;
 
@@ -37,13 +34,13 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   const selectedComponent = data.componentKey ? getComponentByKey(data.componentKey) : null;
 
   const handleViewModeChange = (mode: 'mobile' | 'laptop') => {
-    const dimensions = mode === 'mobile' 
-      ? BOX_DEFAULTS.component.mobile 
+    const dimensions = mode === 'mobile'
+      ? BOX_DEFAULTS.component.mobile
       : BOX_DEFAULTS.component.laptop;
-    updateNode(id, { 
-      viewMode: mode, 
-      width: dimensions.width, 
-      height: dimensions.height 
+    updateNode(id, {
+      viewMode: mode,
+      width: dimensions.width,
+      height: dimensions.height
     });
   };
 
@@ -53,84 +50,128 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
         minWidth={300}
         minHeight={400}
         isVisible={selected}
-        lineClassName="!border-purple-500"
-        handleClassName="!w-2 !h-2 !bg-purple-500 !border-purple-500"
+        lineClassName="!border-transparent"
+        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
       />
-      <Card 
-        className="flex flex-col bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
-        style={{ width: data.width, height: data.height }}
+      <div
+        className="
+          relative flex flex-col
+          bg-white/80 backdrop-blur-md
+          rounded-2xl
+          border border-white/60
+          transition-all duration-150
+          hover:shadow-[var(--shadow-node-hover)]
+        "
+        style={{
+          width: data.width,
+          height: data.height,
+          boxShadow: 'var(--shadow-node)',
+        }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
-          <div className="flex items-center gap-2">
-            {isEditingAlias ? (
-              <Input
-                value={data.alias}
-                onChange={(e) => updateNode(id, { alias: e.target.value })}
-                onBlur={() => setIsEditingAlias(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
-                className="h-5 w-20 text-xs"
-                autoFocus
-              />
-            ) : (
-              <span
-                className="cursor-pointer rounded-lg bg-purple-50 px-2 py-0.5 font-mono text-xs text-purple-600 hover:bg-purple-100"
-                onClick={() => setIsEditingAlias(true)}
-              >
-                @{data.alias}
-              </span>
-            )}
-            {/* Component Selector */}
-            <Select
-              value={data.componentKey}
-              onValueChange={(value) => updateNode(id, { componentKey: value })}
+        {/* Left accent bar */}
+        <div
+          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
+          style={{ backgroundColor: 'var(--accent-component)' }}
+        />
+
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          {isEditingAlias ? (
+            <Input
+              value={data.alias}
+              onChange={(e) => updateNode(id, { alias: e.target.value })}
+              onBlur={() => setIsEditingAlias(false)}
+              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              className="h-5 w-20 text-[11px] font-mono"
+              autoFocus
+            />
+          ) : (
+            <span
+              className="
+                group flex items-center gap-1.5
+                cursor-pointer rounded-md px-2 py-0.5
+                font-mono text-[11px]
+                hover:opacity-80 transition-opacity
+              "
+              style={{
+                backgroundColor: 'var(--clay-component-bg)',
+                color: 'var(--clay-component-text)',
+              }}
+              onClick={() => setIsEditingAlias(true)}
             >
-              <SelectTrigger className="h-5 w-[100px] border-none bg-muted/50 px-1.5 text-[10px]">
-                <SelectValue placeholder="Component..." />
-              </SelectTrigger>
-              <SelectContent>
-                {registryKeys.length === 0 ? (
-                  <SelectItem value="_empty" disabled>
-                    No components
-                  </SelectItem>
-                ) : (
-                  registryKeys.map((key) => {
-                    const entry = getComponentByKey(key);
-                    return (
-                      <SelectItem key={key} value={key} className="text-xs">
-                        {entry?.name || key}
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
-            {/* View Mode Toggle */}
-            <div className="flex rounded-md border">
-              <Button
-                variant={data.viewMode === 'mobile' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-5 w-5 rounded-r-none"
-                onClick={() => handleViewModeChange('mobile')}
-              >
-                <Smartphone className="h-3 w-3" />
-              </Button>
-              <Button
-                variant={data.viewMode === 'laptop' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-5 w-5 rounded-l-none"
-                onClick={() => handleViewModeChange('laptop')}
-              >
-                <Monitor className="h-3 w-3" />
-              </Button>
-            </div>
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: 'var(--accent-component)' }}
+              />
+              @{data.alias}
+            </span>
+          )}
+
+          {/* Component Selector */}
+          <Select
+            value={data.componentKey}
+            onValueChange={(value) => updateNode(id, { componentKey: value })}
+          >
+            <SelectTrigger className="h-5 w-[100px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
+              <SelectValue placeholder="Component..." />
+            </SelectTrigger>
+            <SelectContent>
+              {registryKeys.length === 0 ? (
+                <SelectItem value="_empty" disabled>
+                  No components
+                </SelectItem>
+              ) : (
+                registryKeys.map((key) => {
+                  const entry = getComponentByKey(key);
+                  return (
+                    <SelectItem key={key} value={key} className="text-xs">
+                      {entry?.name || key}
+                    </SelectItem>
+                  );
+                })
+              )}
+            </SelectContent>
+          </Select>
+
+          {/* View Mode Toggle - Pill-shaped segmented control */}
+          <div className="flex rounded-full bg-zinc-100/80 p-0.5">
+            <button
+              onClick={() => handleViewModeChange('mobile')}
+              className={`
+                h-5 w-7 rounded-full
+                flex items-center justify-center
+                transition-all duration-150
+                ${data.viewMode === 'mobile'
+                  ? 'bg-white shadow-sm text-zinc-900'
+                  : 'text-zinc-500 hover:text-zinc-700'
+                }
+              `}
+            >
+              <Smartphone className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => handleViewModeChange('laptop')}
+              className={`
+                h-5 w-7 rounded-full
+                flex items-center justify-center
+                transition-all duration-150
+                ${data.viewMode === 'laptop'
+                  ? 'bg-white shadow-sm text-zinc-900'
+                  : 'text-zinc-500 hover:text-zinc-700'
+                }
+              `}
+            >
+              <Monitor className="h-3 w-3" />
+            </button>
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-1 flex-col gap-1.5 overflow-hidden px-2 pb-2">
-          {/* Component Render Area - iframe for proper viewport simulation */}
-          <div className="flex-1 overflow-hidden rounded-2xl border bg-white">
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-4 pb-4 overflow-hidden">
+          <div className="h-full overflow-hidden rounded-xl border border-zinc-100 bg-white">
             {data.componentKey && selectedComponent ? (
               <iframe
                 src={`/uwu-canvas/preview/${data.componentKey}`}
@@ -139,15 +180,15 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
                 title={selectedComponent.name}
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                {registryKeys.length === 0 
-                  ? 'No components in registry. See REGISTRY_GUIDELINES.md'
-                  : 'Select a component to render'}
+              <div className="flex h-full items-center justify-center text-[13px] text-zinc-400">
+                {registryKeys.length === 0
+                  ? 'No components in registry'
+                  : 'Select a component to preview'}
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   );
 }

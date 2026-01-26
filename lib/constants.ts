@@ -44,8 +44,8 @@ export const ALIAS_PREFIXES = {
 export const CANVAS_CONFIG = {
 //   snapGrid: [20, 20] as [number, number],
   backgroundGap: 24,
-  backgroundSize: 2.5,
-  backgroundColor: '#BFBFBF',
+  backgroundSize: 1,
+  backgroundColor: 'rgba(0,0,0,0.08)',
   minZoom: 0.1,
   maxZoom: 2,
 } as const;

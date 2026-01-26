@@ -3,9 +3,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader } from '../ui/card';
 import {
   Select,
   SelectContent,
@@ -35,13 +33,13 @@ function extractJSON(text: string): string {
   if (codeBlockMatch) {
     return codeBlockMatch[1].trim();
   }
-  
+
   // Try to find JSON object/array in the text
   const jsonMatch = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
   if (jsonMatch) {
     return jsonMatch[0];
   }
-  
+
   // Return as-is if no pattern found
   return text.trim();
 }
@@ -98,16 +96,16 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [jsonFiles, setJsonFiles] = useState<string[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
-  
+
   // Track previous isRunning state of source generator for auto-apply
   const prevSourceIsRunningRef = useRef<boolean | null>(null);
-  
+
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
     const node = state.nodes.find((n) => n.id === id);
     return node?.data as Data2UINodeData | undefined;
   });
-  
+
   const updateNode = useCanvasStore((state) => state.updateNode);
   const getAliasMap = useCanvasStore((state) => state.getAliasMap);
 
@@ -132,7 +130,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   const availableAliases = Object.entries(aliasMap)
     .filter(([_, info]) => info.type === 'generator' || info.type === 'content')
     .map(([alias]) => alias);
-  
+
   // Watch source generator node reactively using store selector
   const sourceGeneratorData = useCanvasStore((state) => {
     if (!data?.sourceAlias) return null;
@@ -142,7 +140,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
     }
     return null;
   });
-  
+
   // Define handleApply using useCallback so it can be used in useEffect
   const handleApply = useCallback(async () => {
     if (!data || !data.sourceAlias || !data.outputPath) {
@@ -219,7 +217,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
       setIsApplying(false);
     }
   }, [data, getAliasMap]);
-  
+
   // Auto-apply when generator finishes (isRunning goes from true to false)
   useEffect(() => {
     if (!data || !data.sourceAlias || !data.outputPath || !sourceGeneratorData) {
@@ -227,10 +225,10 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
       prevSourceIsRunningRef.current = null;
       return;
     }
-    
+
     const currentIsRunning = sourceGeneratorData.isRunning;
     const prevIsRunning = prevSourceIsRunningRef.current;
-    
+
     // Check if generation just finished (transition from true to false)
     if (prevIsRunning === true && currentIsRunning === false) {
       // Generation just completed - auto-apply if there's output
@@ -242,11 +240,11 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         }, 100);
       }
     }
-    
+
     // Update previous state
     prevSourceIsRunningRef.current = currentIsRunning;
   }, [data?.sourceAlias, data?.outputPath, sourceGeneratorData?.isRunning, sourceGeneratorData?.output, handleApply]);
-  
+
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
 
@@ -256,46 +254,77 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         minWidth={300}
         minHeight={190}
         isVisible={selected}
-        lineClassName="!border-orange-500"
-        handleClassName="!w-2 !h-2 !bg-orange-500 !border-orange-500"
+        lineClassName="!border-transparent"
+        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
       />
-      <Card 
-        className="bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
-        style={{ width: data.width, height: data.height }}
+      <div
+        className="
+          relative
+          bg-white/80 backdrop-blur-md
+          rounded-2xl
+          border border-white/60
+          transition-all duration-150
+          hover:shadow-[var(--shadow-node-hover)]
+        "
+        style={{
+          width: data.width,
+          height: data.height,
+          boxShadow: 'var(--shadow-node)',
+        }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
-          <div className="flex items-center gap-2">
-            {isEditingAlias ? (
-              <Input
-                value={data.alias}
-                onChange={(e) => updateNode(id, { alias: e.target.value })}
-                onBlur={() => setIsEditingAlias(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
-                className="h-5 w-20 text-xs"
-                autoFocus
-              />
-            ) : (
+        {/* Left accent bar */}
+        <div
+          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
+          style={{ backgroundColor: 'var(--accent-data2ui)' }}
+        />
+
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          {isEditingAlias ? (
+            <Input
+              value={data.alias}
+              onChange={(e) => updateNode(id, { alias: e.target.value })}
+              onBlur={() => setIsEditingAlias(false)}
+              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              className="h-5 w-20 text-[11px] font-mono"
+              autoFocus
+            />
+          ) : (
+            <span
+              className="
+                group flex items-center gap-1.5
+                cursor-pointer rounded-md px-2 py-0.5
+                font-mono text-[11px]
+                hover:opacity-80 transition-opacity
+              "
+              style={{
+                backgroundColor: 'var(--clay-data2ui-bg)',
+                color: 'var(--clay-data2ui-text)',
+              }}
+              onClick={() => setIsEditingAlias(true)}
+            >
               <span
-                className="cursor-pointer rounded-lg bg-orange-50 px-2 py-0.5 font-mono text-xs text-orange-600 hover:bg-orange-100"
-                onClick={() => setIsEditingAlias(true)}
-              >
-                @{data.alias}
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2 pb-2">
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: 'var(--accent-data2ui)' }}
+              />
+              @{data.alias}
+            </span>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex flex-col gap-3 px-4 pb-4 h-[calc(100%-52px)] overflow-hidden">
           {/* Source -> Output in one line */}
-          <div className="flex-shrink-0 flex items-center gap-1.5">
+          <div className="flex-shrink-0 flex items-center gap-2">
             <div className="flex-1 min-w-0">
               <Select
                 value={data.sourceAlias}
                 onValueChange={(value) => updateNode(id, { sourceAlias: value })}
               >
-                <SelectTrigger className="h-8 w-full text-xs">
+                <SelectTrigger className="h-8 w-full text-[11px] bg-zinc-50/50 border-zinc-100 hover:bg-zinc-100/50 transition-colors rounded-lg">
                   <SelectValue placeholder="Source..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -313,13 +342,13 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
                 </SelectContent>
               </Select>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <ArrowRight className="h-4 w-4 text-zinc-300 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Select
                 value={data.outputPath}
                 onValueChange={(value) => updateNode(id, { outputPath: value })}
               >
-                <SelectTrigger className="h-8 w-full text-xs">
+                <SelectTrigger className="h-8 w-full text-[11px] bg-zinc-50/50 border-zinc-100 hover:bg-zinc-100/50 transition-colors rounded-lg">
                   <SelectValue placeholder={isLoadingFiles ? "Loading..." : "Output..."} />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,48 +373,57 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
           </div>
 
           {/* Apply Button */}
-          <div className="flex-shrink-0">
-            <Button
-              onClick={handleApply}
-              disabled={isApplying || !data.sourceAlias || !data.outputPath}
-              className="w-full gap-2"
-              size="sm"
-            >
-              {isApplying ? (
-                <>Applying...</>
-              ) : applyStatus === 'success' ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Applied
-                </>
-              ) : (
-                <>Apply</>
-              )}
-            </Button>
-          </div>
+          <button
+            onClick={handleApply}
+            disabled={isApplying || !data.sourceAlias || !data.outputPath}
+            className={`
+              w-full h-9 rounded-lg
+              flex items-center justify-center gap-2
+              text-[13px] font-medium
+              transition-all duration-150
+              active:scale-[0.98]
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${applyStatus === 'success'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-zinc-900 text-white hover:bg-zinc-800'
+              }
+            `}
+          >
+            {isApplying ? (
+              <>Applying...</>
+            ) : applyStatus === 'success' ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                Applied
+              </>
+            ) : (
+              <>Apply</>
+            )}
+          </button>
 
           {/* Status Display - Scrollable area */}
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
             {applyStatus === 'error' && errorMessage && (
-              <div className="flex-shrink-0 rounded-lg bg-red-50 border border-red-200 p-1.5">
-                <div className="flex items-start gap-1.5">
-                  <AlertCircle className="h-3.5 w-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-red-600">{errorMessage}</p>
+              <div className="flex-shrink-0 rounded-lg bg-red-50 border border-red-100 p-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-red-600">{errorMessage}</p>
                 </div>
               </div>
             )}
-            
+
             {data.sourceAlias && data.outputPath && applyStatus !== 'error' && (
-              <div className="flex-shrink-0 rounded-lg bg-muted/30 p-1.5">
-                <p className="text-[10px] text-muted-foreground">
-                  <span className="font-mono">@{data.sourceAlias}</span> →{' '}
-                  <span className="font-mono">{data.outputPath}</span>
+              <div className="flex-shrink-0 rounded-lg bg-zinc-50/50 p-2">
+                <p className="text-[11px] text-zinc-500">
+                  <span className="font-mono text-zinc-600">@{data.sourceAlias}</span>
+                  <span className="mx-1.5">→</span>
+                  <span className="font-mono text-zinc-600">{data.outputPath}</span>
                 </p>
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   );
 }

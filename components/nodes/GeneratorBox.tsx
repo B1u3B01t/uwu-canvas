@@ -3,9 +3,7 @@
 import { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { Play, Square } from 'lucide-react';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader } from '../ui/card';
 import {
   Select,
   SelectContent,
@@ -36,13 +34,13 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
   const [providersData, setProvidersData] = useState<ProvidersMap>(cachedProviders || {});
   const [isLoadingProviders, setIsLoadingProviders] = useState(!providersFetched);
-  
+
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
     const node = state.nodes.find((n) => n.id === id);
     return node?.data as GeneratorNodeData | undefined;
   });
-  
+
   const updateNode = useCanvasStore((state) => state.updateNode);
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
@@ -50,20 +48,20 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
 
   const providerKeys = Object.keys(providersData);
   const hasProviders = providerKeys.length > 0;
-  
+
   // Get current provider and model, with fallbacks
-  const currentProvider = (data?.provider && providersData[data.provider]) 
-    ? data.provider 
+  const currentProvider = (data?.provider && providersData[data.provider])
+    ? data.provider
     : (providerKeys[0] as AIProvider | undefined);
   const currentProviderData = currentProvider ? providersData[currentProvider] : null;
-  const currentModel = currentProviderData 
+  const currentModel = currentProviderData
     ? (data?.model && currentProviderData.models.some(m => m.id === data.model) ? data.model : currentProviderData.models[0]?.id)
     : undefined;
 
   // Fetch available providers on mount
   useEffect(() => {
     if (providersFetched) return;
-    
+
     fetch('/uwu-canvas/api/providers')
       .then((res) => res.json())
       .then((response) => {
@@ -72,12 +70,12 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         providersFetched = true;
         setProvidersData(providers);
         setIsLoadingProviders(false);
-        
+
         const providerKeys = Object.keys(providers);
         // Update node to first available provider if current one is not available
         if (data && providerKeys.length > 0 && (!data.provider || !providers[data.provider])) {
           const firstProvider = providerKeys[0] as AIProvider;
-          updateNode(id, { 
+          updateNode(id, {
             provider: firstProvider,
             model: providers[firstProvider].models[0].id
           });
@@ -92,8 +90,8 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const handleProviderChange = useCallback((provider: AIProvider) => {
     const models = providersData[provider]?.models;
     if (models) {
-      updateNode(id, { 
-        provider, 
+      updateNode(id, {
+        provider,
         model: models[0].id // Reset to first model of new provider
       });
     }
@@ -166,7 +164,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const handleStop = useCallback(() => {
     setGeneratorRunning(id, false);
   }, [id, setGeneratorRunning]);
-  
+
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
 
@@ -176,121 +174,161 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         minWidth={280}
         minHeight={300}
         isVisible={selected}
-        lineClassName="!border-blue-500"
-        handleClassName="!w-2 !h-2 !bg-blue-500 !border-blue-500"
+        lineClassName="!border-transparent"
+        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
       />
-      <Card 
-        className="bg-transparent !border-transparent hover:!border-gray-200 shadow-none transition-all hover:shadow-lg !rounded-2xl"
-        style={{ width: data.width, height: data.height }}
+      <div
+        className="
+          relative
+          bg-white/80 backdrop-blur-md
+          rounded-2xl
+          border border-white/60
+          transition-all duration-150
+          hover:shadow-[var(--shadow-node-hover)]
+        "
+        style={{
+          width: data.width,
+          height: data.height,
+          boxShadow: 'var(--shadow-node)',
+        }}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 px-2">
-          <div className="flex items-center gap-2">
-            {isEditingAlias ? (
-              <Input
-                value={data.alias}
-                onChange={(e) => updateNode(id, { alias: e.target.value })}
-                onBlur={() => setIsEditingAlias(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
-                className="h-5 w-20 text-xs"
-                autoFocus
-              />
-            ) : (
+        {/* Left accent bar */}
+        <div
+          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
+          style={{ backgroundColor: 'var(--accent-generator)' }}
+        />
+
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          {isEditingAlias ? (
+            <Input
+              value={data.alias}
+              onChange={(e) => updateNode(id, { alias: e.target.value })}
+              onBlur={() => setIsEditingAlias(false)}
+              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              className="h-5 w-20 text-[11px] font-mono"
+              autoFocus
+            />
+          ) : (
+            <span
+              className="
+                group flex items-center gap-1.5
+                cursor-pointer rounded-md px-2 py-0.5
+                font-mono text-[11px]
+                hover:opacity-80 transition-opacity
+              "
+              style={{
+                backgroundColor: 'var(--clay-generator-bg)',
+                color: 'var(--clay-generator-text)',
+              }}
+              onClick={() => setIsEditingAlias(true)}
+            >
               <span
-                className="cursor-pointer rounded-lg bg-blue-50 px-2 py-0.5 font-mono text-xs text-blue-600 hover:bg-blue-100"
-                onClick={() => setIsEditingAlias(true)}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: 'var(--accent-generator)' }}
+              />
+              @{data.alias}
+            </span>
+          )}
+
+          {/* Provider & Model Selection */}
+          {isLoadingProviders ? (
+            <span className="text-[10px] text-zinc-400">...</span>
+          ) : !hasProviders ? (
+            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600">
+              No provider
+            </span>
+          ) : currentProvider && currentProviderData ? (
+            <>
+              <Select
+                value={currentProvider}
+                onValueChange={(value) => handleProviderChange(value as AIProvider)}
+                disabled={data.isRunning}
               >
-                @{data.alias}
-              </span>
-            )}
-            {/* Provider & Model Selection */}
-            {isLoadingProviders ? (
-              <span className="text-[10px] text-muted-foreground">...</span>
-            ) : !hasProviders ? (
-              <span className="rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] text-orange-600">
-                No provider in env
-              </span>
-            ) : currentProvider && currentProviderData ? (
-              <>
-                <Select
-                  value={currentProvider}
-                  onValueChange={(value) => handleProviderChange(value as AIProvider)}
-                  disabled={data.isRunning}
-                >
-                  <SelectTrigger className="h-5 w-[80px] border-none bg-muted/50 px-1.5 text-[10px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providerKeys.map((key) => (
-                      <SelectItem key={key} value={key} className="text-xs">
-                        {providersData[key].name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={currentModel}
-                  onValueChange={(value) => updateNode(id, { model: value })}
-                  disabled={data.isRunning}
-                >
-                  <SelectTrigger className="h-5 w-[100px] border-none bg-muted/50 px-1.5 text-[10px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentProviderData.models.map((model) => (
-                      <SelectItem key={model.id} value={model.id} className="text-xs">
-                        {model.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : null}
-          </div>
-        </CardHeader>
-        <CardContent className="flex h-[calc(100%-40px)] flex-col gap-1.5 px-2 pb-2">
+                <SelectTrigger className="h-5 w-[80px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {providerKeys.map((key) => (
+                    <SelectItem key={key} value={key} className="text-xs">
+                      {providersData[key].name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={currentModel}
+                onValueChange={(value) => updateNode(id, { model: value })}
+                disabled={data.isRunning}
+              >
+                <SelectTrigger className="h-5 w-[100px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentProviderData.models.map((model) => (
+                    <SelectItem key={model.id} value={model.id} className="text-xs">
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : null}
+        </div>
+
+        {/* Content */}
+        <div className="flex flex-col gap-3 px-4 pb-4 h-[calc(100%-52px)]">
           {/* Input Section */}
           <div className="flex-shrink-0">
-            <div className="flex items-center justify-between mb-0.5">
-              <label className="text-xs font-medium text-muted-foreground">Input</label>
-              <Button
-                size="sm"
-                className="h-6 w-6 p-0"
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Input</label>
+              <button
                 onClick={data.isRunning ? handleStop : handleRun}
-                variant={data.isRunning ? 'destructive' : 'default'}
                 disabled={!hasProviders || isLoadingProviders}
+                className={`
+                  h-7 w-7 rounded-lg
+                  flex items-center justify-center
+                  transition-all duration-150
+                  active:scale-95
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  ${data.isRunning
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  }
+                `}
               >
                 {data.isRunning ? (
                   <Square className="h-3.5 w-3.5" />
                 ) : (
-                  <Play className="h-3.5 w-3.5" />
+                  <Play className="h-3.5 w-3.5 ml-0.5" />
                 )}
-              </Button>
+              </button>
             </div>
             <AutocompleteTextarea
               value={data.input}
               onChange={(value) => updateNode(id, { input: value })}
               placeholder="Enter prompt... Use @alias to reference other boxes"
-              className="min-h-[60px] text-xs"
+              className="min-h-[60px] text-[13px] bg-zinc-50/50 border-zinc-100 focus:border-zinc-200 rounded-lg"
               disabled={data.isRunning}
             />
           </div>
-          
+
           {/* Output Section */}
           <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-0.5 block text-xs font-medium text-muted-foreground">Output</label>
-            <div className="flex-1 overflow-auto rounded-lg border bg-white p-1.5">
+            <label className="mb-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Output</label>
+            <div className="flex-1 overflow-auto rounded-lg border border-zinc-100 bg-white/60 p-2.5">
               {data.output ? (
-                <pre className="whitespace-pre-wrap text-xs">{data.output}</pre>
+                <pre className="whitespace-pre-wrap text-[13px] text-zinc-700">{data.output}</pre>
               ) : (
-                <p className="text-xs text-muted-foreground italic">Output will appear here...</p>
+                <p className="text-[13px] text-zinc-400 italic">Output will appear here...</p>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   );
 }

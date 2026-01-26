@@ -1,15 +1,15 @@
 'use client';
 
 import { useReactFlow } from '@xyflow/react';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { Button } from './ui/button';
+import { ZoomIn, ZoomOut, Maximize2, Sparkles, FileText, Layout, Database } from 'lucide-react';
+import { Tooltip, TooltipProvider } from './ui/Tooltip';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 
 const BOX_TYPES = [
-  { type: 'generator' as const, label: 'Generator', color: 'blue' },
-  { type: 'content' as const, label: 'Content', color: 'green' },
-  { type: 'component' as const, label: 'Component', color: 'purple' },
-  { type: 'data2ui' as const, label: 'Data2UI', color: 'orange' },
+  { type: 'generator' as const, label: 'Generator', icon: Sparkles, accent: 'var(--accent-generator)' },
+  { type: 'content' as const, label: 'Content', icon: FileText, accent: 'var(--accent-content)' },
+  { type: 'component' as const, label: 'Component', icon: Layout, accent: 'var(--accent-component)' },
+  { type: 'data2ui' as const, label: 'Data2UI', icon: Database, accent: 'var(--accent-data2ui)' },
 ] as const;
 
 export function Toolbar() {
@@ -17,7 +17,6 @@ export function Toolbar() {
   const addNode = useCanvasStore((state) => state.addNode);
 
   const handleAddNode = (type: 'generator' | 'content' | 'component' | 'data2ui') => {
-    // Calculate position at center of viewport
     const viewport = document.querySelector('.react-flow__viewport');
     if (viewport) {
       const rect = viewport.getBoundingClientRect();
@@ -26,53 +25,93 @@ export function Toolbar() {
       const position = screenToFlowPosition({ x: centerX, y: centerY });
       addNode(type, position);
     } else {
-      // Fallback to default position if viewport not found
       addNode(type);
     }
   };
 
   return (
-    <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-      {/* Clickable Box Buttons */}
-      <div className="flex items-center gap-2 rounded-md border bg-white p-1.5 shadow-sm">
-        {BOX_TYPES.map(({ type, label, color }) => (
-          <button
-            key={type}
-            onClick={() => handleAddNode(type)}
-            className={`
-              cursor-pointer
-              px-3 py-1.5 rounded-sm
-              text-sm font-medium
-              transition-all duration-150
-              select-none
-              ${
-                color === 'blue'
-                  ? 'bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white focus:bg-blue-500 focus:text-white'
-                  : color === 'green'
-                  ? 'bg-green-50 text-green-600 hover:bg-green-500 hover:text-white focus:bg-green-500 focus:text-white'
-                  : color === 'purple'
-                  ? 'bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white focus:bg-purple-500 focus:text-white'
-                  : 'bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white focus:bg-orange-500 focus:text-white'
-              }
-            `}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <TooltipProvider>
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
+        {/* Node Creation Buttons - Glassmorphic Pill */}
+        <div className="flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg p-1.5">
+          {BOX_TYPES.map(({ type, label, icon: Icon, accent }) => (
+            <Tooltip key={type} content={label}>
+              <button
+                onClick={() => handleAddNode(type)}
+                className="
+                  relative group
+                  w-9 h-9 rounded-full
+                  flex items-center justify-center
+                  text-zinc-500
+                  hover:text-zinc-900 hover:bg-zinc-100/80
+                  active:scale-95
+                  transition-all duration-150
+                  select-none cursor-pointer
+                "
+              >
+                <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+                {/* Accent dot on hover */}
+                <span
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ backgroundColor: accent }}
+                />
+              </button>
+            </Tooltip>
+          ))}
+        </div>
 
-      {/* Zoom Controls */}
-      <div className="flex items-center gap-1 rounded-md border bg-white p-1 shadow-sm">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => zoomOut()}>
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => zoomIn()}>
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => fitView({ padding: 0.2 })}>
-          <Maximize2 className="h-4 w-4" />
-        </Button>
+        {/* Zoom Controls - Glassmorphic Pill */}
+        <div className="flex items-center gap-0.5 rounded-full bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg p-1">
+          <Tooltip content="Zoom Out">
+            <button
+              onClick={() => zoomOut()}
+              className="
+                w-8 h-8 rounded-full
+                flex items-center justify-center
+                text-zinc-500
+                hover:text-zinc-900 hover:bg-zinc-100/80
+                active:scale-95
+                transition-all duration-150
+                cursor-pointer
+              "
+            >
+              <ZoomOut className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Zoom In">
+            <button
+              onClick={() => zoomIn()}
+              className="
+                w-8 h-8 rounded-full
+                flex items-center justify-center
+                text-zinc-500
+                hover:text-zinc-900 hover:bg-zinc-100/80
+                active:scale-95
+                transition-all duration-150
+                cursor-pointer
+              "
+            >
+              <ZoomIn className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Fit View">
+            <button
+              onClick={() => fitView({ padding: 0.2 })}
+              className="
+                w-8 h-8 rounded-full
+                flex items-center justify-center
+                text-zinc-500
+                hover:text-zinc-900 hover:bg-zinc-100/80
+                active:scale-95
+                transition-all duration-150
+                cursor-pointer
+              "
+            >
+              <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
