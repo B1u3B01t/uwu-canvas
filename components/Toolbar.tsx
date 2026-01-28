@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useReactFlow, Panel } from '@xyflow/react';
-import { ZoomIn, ZoomOut, Maximize2, Sparkles, FileText, Layout, Database } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Sparkles, FileText, Layout, Database, Sun, Moon } from 'lucide-react';
 import { Tooltip, TooltipProvider } from './ui/Tooltip';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 
@@ -24,6 +24,8 @@ const ACCENT_COLORS: Record<string, string> = {
 export function Toolbar() {
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow();
   const addNode = useCanvasStore((state) => state.addNode);
+  const isDarkMode = useCanvasStore((state) => state.isDarkMode);
+  const toggleDarkMode = useCanvasStore((state) => state.toggleDarkMode);
   const [hoveredType, setHoveredType] = useState<string | null>(null);
 
   // Get spreading style based on button position and hovered type
@@ -144,6 +146,29 @@ export function Toolbar() {
             </button>
           </Tooltip>
         </div>
+
+        {/* Dark Mode Toggle */}
+        <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
+          <button
+            onClick={toggleDarkMode}
+            className="
+              w-9 h-9 rounded-full
+              flex items-center justify-center
+              bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg
+              text-zinc-500
+              hover:text-zinc-900 hover:bg-zinc-100/80
+              active:scale-95
+              transition-all duration-150
+              cursor-pointer
+            "
+          >
+            {isDarkMode ? (
+              <Sun className="w-4 h-4" strokeWidth={1.75} />
+            ) : (
+              <Moon className="w-4 h-4" strokeWidth={1.75} />
+            )}
+          </button>
+        </Tooltip>
         </div>
       </TooltipProvider>
     </Panel>

@@ -38,6 +38,10 @@ export function Canvas() {
   const removeNode = useCanvasStore((state) => state.removeNode);
   const addNode = useCanvasStore((state) => state.addNode);
   const addContentNodeWithFile = useCanvasStore((state) => state.addContentNodeWithFile);
+  const isDarkMode = useCanvasStore((state) => state.isDarkMode);
+
+  // Get theme colors based on dark mode
+  const themeColors = isDarkMode ? CANVAS_CONFIG.dark : CANVAS_CONFIG.light;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes as Node[]);
   const { fitView, screenToFlowPosition } = useReactFlow();
@@ -177,7 +181,10 @@ export function Canvas() {
   );
 
   return (
-    <div className="h-full w-full relative">
+    <div
+      className="h-full w-full relative transition-colors duration-300"
+      style={{ background: themeColors.background }}
+    >
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}
@@ -197,7 +204,7 @@ export function Canvas() {
           variant={BackgroundVariant.Dots}
           gap={CANVAS_CONFIG.backgroundGap}
           size={CANVAS_CONFIG.backgroundSize}
-          color={CANVAS_CONFIG.backgroundColor}
+          color={themeColors.dotsColor}
         />
         <Toolbar />
       </ReactFlow>

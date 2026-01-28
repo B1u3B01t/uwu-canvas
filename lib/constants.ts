@@ -77,16 +77,30 @@ export const INPUT_OUTPUT_STYLE = {
 
 // Canvas settings
 export const CANVAS_CONFIG = {
-//   snapGrid: [20, 20] as [number, number],
   backgroundGap: 30,
-  backgroundSize: 2.7,           // Increased from 1
-  backgroundColor: 'rgba(0,0,0,0.15)', // Increased from 0.08
+  backgroundSize: 2.7,
   minZoom: 0.1,
   maxZoom: 2,
+  // Light mode colors
+  light: {
+    background: 'linear-gradient(135deg, #fafafa 0%, #ffffff 50%, #f5f5f7 100%)',
+    dotsColor: 'rgba(0,0,0,0.15)',
+  },
+  // Dark mode colors
+  dark: {
+    background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)',
+    dotsColor: 'rgba(255,255,255,0.15)',
+  },
 } as const;
 
 // AI Provider keys (models are fetched from API)
 export const AI_PROVIDER_KEYS = ['openai', 'anthropic', 'google'] as const;
 
-// Resize handle size (width and height in pixels)
-export const RESIZE_HANDLE_SIZE = '2px';
+// React-grab bridge settings
+export const REACT_GRAB_CONFIG = {
+  // Delay before reading clipboard after copy event (ms)
+  // Needs to be long enough for react-grab to finish writing to clipboard
+  clipboardReadDelay: 500,
+  // Debounce delay before allowing another capture (ms)
+  debounceDelay: 1000,
+} as const;

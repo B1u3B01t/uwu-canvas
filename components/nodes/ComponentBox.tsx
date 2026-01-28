@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect } from 'react';
-import { NodeProps, NodeResizer } from '@xyflow/react';
+import { NodeProps } from '@xyflow/react';
 import { Smartphone, Monitor, Layout, Check } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { getRegistryKeys, getComponentByKey } from '../../lib/registry';
-import { BOX_DEFAULTS, BOX_BACKGROUNDS, RESIZE_HANDLE_SIZE } from '../../lib/constants';
+import { BOX_DEFAULTS, BOX_BACKGROUNDS } from '../../lib/constants';
 import type { ComponentNodeData } from '../../lib/types';
 
 interface PromptCopiedMessage {
@@ -83,24 +83,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   };
 
   return (
-    <>
-      <NodeResizer
-        minWidth={300}
-        minHeight={400}
-        isVisible={selected}
-        lineClassName="!border-transparent"
-        handleClassName="!border !rounded-full"
-        handleStyle={{
-          width: RESIZE_HANDLE_SIZE,
-          height: RESIZE_HANDLE_SIZE,
-          backgroundColor: 'var(--accent-component)',
-          borderColor: 'var(--accent-component)',
-        }}
-        onResize={(_, params) => {
-          updateNode(id, { width: params.width, height: params.height });
-        }}
-      />
-      <div
+    <div
         className="
           relative flex flex-col
           backdrop-blur-md
@@ -239,8 +222,6 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           </div>
         </div>
       </div>
-
-    </>
   );
 }
 

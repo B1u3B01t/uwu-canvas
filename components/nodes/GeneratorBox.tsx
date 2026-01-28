@@ -13,7 +13,7 @@ import {
 } from '../ui/select';
 import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
-import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE, RESIZE_HANDLE_SIZE } from '../../lib/constants';
+import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE } from '../../lib/constants';
 import type { GeneratorNodeData, AIProvider } from '../../lib/types';
 
 interface GeneratorBoxProps extends NodeProps {
@@ -181,8 +181,6 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         lineClassName="!border-transparent"
         handleClassName="!border !rounded-full"
         handleStyle={{
-          width: RESIZE_HANDLE_SIZE,
-          height: RESIZE_HANDLE_SIZE,
           backgroundColor: 'var(--accent-generator)',
           borderColor: 'var(--accent-generator)',
         }}

@@ -18,6 +18,10 @@ interface CanvasStore {
     component: number;
     data2ui: number;
   };
+  isDarkMode: boolean;
+
+  // Theme
+  toggleDarkMode: () => void;
 
   // Node actions
   addNode: (type: 'generator' | 'content' | 'component' | 'data2ui', position?: { x: number; y: number }) => void;
@@ -98,6 +102,11 @@ export const useCanvasStore = create<CanvasStore>()(
   nodes: initialState.nodes,
   selectedNodeId: null,
   counters: initialState.counters,
+  isDarkMode: false,
+
+  toggleDarkMode: () => {
+    set({ isDarkMode: !get().isDarkMode });
+  },
 
   addNode: (type, position = { x: 100, y: 100 }) => {
     const { counters, nodes } = get();

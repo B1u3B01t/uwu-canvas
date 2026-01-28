@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import '@/app/globals.css';
 import { parseReactGrabClipboard } from '../../lib/reactGrabBridge';
 import { generateDynamicComponentPrompt } from '../../lib/promptTemplates';
+import { REACT_GRAB_CONFIG } from '../../lib/constants';
 
 export default function PreviewLayout({
   children,
@@ -50,7 +51,7 @@ export default function PreviewLayout({
       // Clear any pending timeout
       if (timeoutId) clearTimeout(timeoutId);
 
-      // Wait longer to ensure react-grab has finished all its clipboard operations
+      // Wait for react-grab to finish all its clipboard operations
       timeoutId = setTimeout(() => {
         navigator.clipboard.readText().then((text) => {
           const parsed = parseReactGrabClipboard(text);
@@ -78,9 +79,9 @@ export default function PreviewLayout({
           // Reset debounce after a delay
           setTimeout(() => {
             isProcessing = false;
-          }, 500);
+          }, REACT_GRAB_CONFIG.debounceDelay);
         });
-      }, 300); // Increased delay to 300ms
+      }, REACT_GRAB_CONFIG.clipboardReadDelay);
     };
 
     document.addEventListener('copy', handleCopy);

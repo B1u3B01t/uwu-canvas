@@ -22,4 +22,13 @@
   --frost-content: oklch(0.97 0.02 160 / 0.6);
   --frost-component: oklch(0.96 0.04 290 / 0.65);
   --frost-data2ui: oklch(0.97 0.02 45 / 0.6);
+
+  /* Resize handle size (dynamically updated by useZoomAwareHandleSize) */
+  --resize-handle-size: 4px;
+}
+
+/* NodeResizer handle sizing - uses CSS custom property for zoom-aware sizing */
+.react-flow__resize-control.handle {
+  width: var(--resize-handle-size) !important;
+  height: var(--resize-handle-size) !important;
 }

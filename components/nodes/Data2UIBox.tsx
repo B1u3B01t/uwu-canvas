@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
-import { BOX_BACKGROUNDS, RESIZE_HANDLE_SIZE } from '../../lib/constants';
+import { BOX_BACKGROUNDS } from '../../lib/constants';
 import type { Data2UINodeData, GeneratorNodeData } from '../../lib/types';
 
 // Type for recent memories format
@@ -258,8 +258,6 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         lineClassName="!border-transparent"
         handleClassName="!border !rounded-full"
         handleStyle={{
-          width: RESIZE_HANDLE_SIZE,
-          height: RESIZE_HANDLE_SIZE,
           backgroundColor: 'var(--accent-data2ui)',
           borderColor: 'var(--accent-data2ui)',
         }}
