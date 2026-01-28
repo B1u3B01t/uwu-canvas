@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Play, Square } from 'lucide-react';
+import { Play, Square, Sparkles } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
   Select,
@@ -13,6 +13,7 @@ import {
 } from '../ui/select';
 import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
+import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE, RESIZE_HANDLE_SIZE } from '../../lib/constants';
 import type { GeneratorNodeData, AIProvider } from '../../lib/types';
 
 interface GeneratorBoxProps extends NodeProps {
@@ -168,6 +169,9 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
 
+  // Get input/output styles based on backgroundType setting
+  const inputStyle = INPUT_OUTPUT_STYLE[INPUT_OUTPUT_STYLE.backgroundType];
+
   return (
     <>
       <NodeResizer
@@ -175,7 +179,13 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         minHeight={300}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
+        handleClassName="!border !rounded-full"
+        handleStyle={{
+          width: RESIZE_HANDLE_SIZE,
+          height: RESIZE_HANDLE_SIZE,
+          backgroundColor: 'var(--accent-generator)',
+          borderColor: 'var(--accent-generator)',
+        }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
@@ -183,24 +193,16 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
       <div
         className="
           relative
-          bg-white/80 backdrop-blur-md
-          rounded-2xl
-          border border-white/60
+          backdrop-blur-md
+          rounded-3xl
           transition-all duration-150
-          hover:shadow-[var(--shadow-node-hover)]
         "
         style={{
           width: data.width,
           height: data.height,
-          boxShadow: 'var(--shadow-node)',
+          backgroundColor: BOX_BACKGROUNDS.generator,
         }}
       >
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-          style={{ backgroundColor: 'var(--accent-generator)' }}
-        />
-
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
@@ -216,21 +218,18 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
             <span
               className="
                 group flex items-center gap-1.5
-                cursor-pointer rounded-md px-2 py-0.5
+                cursor-pointer rounded-full px-2.5 py-1
                 font-mono text-[11px]
                 hover:opacity-80 transition-opacity
               "
               style={{
-                backgroundColor: 'var(--clay-generator-bg)',
-                color: 'var(--clay-generator-text)',
+                backgroundColor: 'var(--pastel-generator-bg)',
+                color: 'var(--pastel-generator-text)',
               }}
               onClick={() => setIsEditingAlias(true)}
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--accent-generator)' }}
-              />
-              @{data.alias}
+              <Sparkles className="w-3 h-3" />
+              {data.alias}
             </span>
           )}
 
@@ -295,15 +294,15 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                   active:scale-95
                   disabled:opacity-50 disabled:cursor-not-allowed
                   ${data.isRunning
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                    ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
+                    : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100'
                   }
                 `}
               >
                 {data.isRunning ? (
-                  <Square className="h-3.5 w-3.5" />
+                  <Square className="h-4 w-4" strokeWidth={2} />
                 ) : (
-                  <Play className="h-3.5 w-3.5 ml-0.5" />
+                  <Play className="h-4 w-4 ml-0.5" strokeWidth={2} />
                 )}
               </button>
             </div>
@@ -311,7 +310,8 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
               value={data.input}
               onChange={(value) => updateNode(id, { input: value })}
               placeholder="Enter prompt... Use @alias to reference other boxes"
-              className="min-h-[60px] text-[13px] bg-zinc-50/50 border-zinc-100 focus:border-zinc-200 rounded-lg"
+              className={`min-h-[60px] ${inputStyle.background} ${inputStyle.border} ${inputStyle.focusBorder} rounded-lg`}
+              style={{ fontSize: FONT_SIZES.input }}
               disabled={data.isRunning}
             />
           </div>
@@ -319,11 +319,11 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
           {/* Output Section */}
           <div className="flex min-h-0 flex-1 flex-col">
             <label className="mb-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Output</label>
-            <div className="flex-1 overflow-auto rounded-lg border border-zinc-100 bg-white/60 p-2.5">
+            <div className={`flex-1 overflow-auto rounded-lg border ${inputStyle.border} ${inputStyle.background} p-2.5`}>
               {data.output ? (
-                <pre className="whitespace-pre-wrap text-[13px] text-zinc-700">{data.output}</pre>
+                <pre className="whitespace-pre-wrap text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>{data.output}</pre>
               ) : (
-                <p className="text-[13px] text-zinc-400 italic">Output will appear here...</p>
+                <p className="text-zinc-400 italic" style={{ fontSize: FONT_SIZES.output }}>Output will appear here...</p>
               )}
             </div>
           </div>

@@ -1,12 +1,12 @@
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { writeFile, mkdir } from 'fs/promises';
+import { join, normalize, dirname } from 'path';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { path, data } = await request.json();
+    const { path: inputPath, data } = await request.json();
 
-    if (!path || typeof path !== 'string') {
+    if (!inputPath || typeof inputPath !== 'string') {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
     }
 
@@ -15,21 +15,32 @@ export async function POST(request: Request) {
     }
 
     // Sanitize path to prevent directory traversal
-    const sanitizedPath = path.replace(/\.\./g, '').replace(/^\//, '');
-    
-    // Ensure path is within /app/data directory
-    const filePath = join(process.cwd(), 'app', 'data', sanitizedPath);
+    // 1. Remove any .. sequences
+    // 2. Remove leading slashes
+    // 3. Normalize the path to resolve any remaining path tricks
+    const sanitizedPath = normalize(inputPath.replace(/\.\./g, '').replace(/^\/+/, ''));
 
-    // Verify the path is within the data directory
+    // Ensure path ends with .json
+    const finalPath = sanitizedPath.endsWith('.json') ? sanitizedPath : `${sanitizedPath}.json`;
+
+    // Ensure path is within /app/data directory
     const dataDir = join(process.cwd(), 'app', 'data');
-    if (!filePath.startsWith(dataDir)) {
+    const filePath = join(dataDir, finalPath);
+
+    // Verify the normalized path is still within the data directory
+    const normalizedFilePath = normalize(filePath);
+    if (!normalizedFilePath.startsWith(dataDir)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
     }
 
-    // Write the JSON file
-    await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    // Create parent directories if they don't exist
+    const parentDir = dirname(normalizedFilePath);
+    await mkdir(parentDir, { recursive: true });
 
-    return NextResponse.json({ success: true, path: sanitizedPath });
+    // Write the JSON file
+    await writeFile(normalizedFilePath, JSON.stringify(data, null, 2), 'utf-8');
+
+    return NextResponse.json({ success: true, path: finalPath });
   } catch (error) {
     console.error('Error writing JSON file:', error);
     return NextResponse.json(

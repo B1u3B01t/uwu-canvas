@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { AudriaApp } from '@/app/audria/AudriaApp';
+import { ExampleComponent } from '../components/examples/ExampleComponent';
 
 // Component registry entry
 export interface RegistryEntry {
@@ -9,19 +9,48 @@ export interface RegistryEntry {
   description?: string;
 }
 
-// The component registry - AI code editors should add entries here
-// See REGISTRY_GUIDELINES.md for instructions
-//
-// ⚠️ WARNING: NEVER add /uwu-canvas page to this registry!
-// It will cause an infinite loop since ComponentBox renders registry components.
-//
+/**
+ * Component Registry
+ *
+ * Register your components here to make them available in ComponentBox previews.
+ * AI code editors can add entries here following the pattern below.
+ *
+ * USAGE:
+ * 1. Import your component at the top of this file
+ * 2. Add an entry to componentRegistry with a unique key
+ *
+ * EXAMPLE:
+ * ```typescript
+ * import { MyComponent } from '@/app/my-app/MyComponent';
+ *
+ * export const componentRegistry: Record<string, RegistryEntry> = {
+ *   'my-component': {
+ *     name: 'My Component',
+ *     component: MyComponent,
+ *     category: 'App',
+ *     description: 'Description of my component',
+ *   },
+ * };
+ * ```
+ *
+ * WARNING: NEVER add /uwu-canvas page to this registry!
+ * It will cause an infinite loop since ComponentBox renders registry components.
+ */
 export const componentRegistry: Record<string, RegistryEntry> = {
-  'audria': {
-    name: 'Audria',
-    component: AudriaApp,
-    category: 'App',
-    description: 'Mobile app with 3D theme sphere and iOS-style bottom sheet',
+  // Example component - replace with your own components
+  'example': {
+    name: 'Example',
+    component: ExampleComponent,
+    category: 'Example',
+    description: 'Example component to demonstrate the registry pattern',
   },
+  // Add your components here:
+  // 'your-component-key': {
+  //   name: 'Your Component Name',
+  //   component: YourComponent,
+  //   category: 'Your Category',
+  //   description: 'Description of your component',
+  // },
 };
 
 // Helper functions

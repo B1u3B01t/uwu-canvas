@@ -1,0 +1,25 @@
+/* UWU Canvas Styles */
+
+:root {
+  /* Accent colors for node types */
+  --accent-generator: oklch(0.65 0.18 250);
+  --accent-content: oklch(0.65 0.18 160);
+  --accent-component: oklch(0.65 0.18 290);
+  --accent-data2ui: oklch(0.65 0.18 45);
+
+  /* Pastel Badge Colors (for alias pills) */
+  --pastel-generator-bg: oklch(0.85 0.12 250);
+  --pastel-generator-text: oklch(0.25 0.08 250);
+  --pastel-content-bg: oklch(0.85 0.12 160);
+  --pastel-content-text: oklch(0.25 0.08 160);
+  --pastel-component-bg: oklch(0.85 0.12 290);
+  --pastel-component-text: oklch(0.25 0.08 290);
+  --pastel-data2ui-bg: oklch(0.85 0.12 45);
+  --pastel-data2ui-text: oklch(0.25 0.08 45);
+
+  /* Frosted Box Tints (5-10% of accent color) */
+  --frost-generator: oklch(0.97 0.02 250 / 0.6);
+  --frost-content: oklch(0.97 0.02 160 / 0.6);
+  --frost-component: oklch(0.96 0.04 290 / 0.65);
+  --frost-data2ui: oklch(0.97 0.02 45 / 0.6);
+}

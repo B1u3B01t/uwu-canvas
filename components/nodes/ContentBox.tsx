@@ -2,10 +2,11 @@
 
 import { memo, useState } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Download, FileIcon } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
+import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE, RESIZE_HANDLE_SIZE } from '../../lib/constants';
 import { fileUtils } from '../../lib/utils';
 import type { ContentNodeData } from '../../lib/types';
 
@@ -23,6 +24,9 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
   // Early return if node data not found
   if (!data) return null;
 
+  // Get input/output styles based on backgroundType setting
+  const inputStyle = INPUT_OUTPUT_STYLE[INPUT_OUTPUT_STYLE.backgroundType];
+
   return (
     <>
       <NodeResizer
@@ -30,7 +34,13 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
         minHeight={150}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
+        handleClassName="!border !rounded-full"
+        handleStyle={{
+          width: RESIZE_HANDLE_SIZE,
+          height: RESIZE_HANDLE_SIZE,
+          backgroundColor: 'var(--accent-content)',
+          borderColor: 'var(--accent-content)',
+        }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
@@ -38,24 +48,16 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
       <div
         className="
           relative
-          bg-white/80 backdrop-blur-md
-          rounded-2xl
-          border border-white/60
+          backdrop-blur-md
+          rounded-3xl
           transition-all duration-150
-          hover:shadow-[var(--shadow-node-hover)]
         "
         style={{
           width: data.width,
           height: data.height,
-          boxShadow: 'var(--shadow-node)',
+          backgroundColor: BOX_BACKGROUNDS.content,
         }}
       >
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-          style={{ backgroundColor: 'var(--accent-content)' }}
-        />
-
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
@@ -71,21 +73,18 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
             <span
               className="
                 group flex items-center gap-1.5
-                cursor-pointer rounded-md px-2 py-0.5
+                cursor-pointer rounded-full px-2.5 py-1
                 font-mono text-[11px]
                 hover:opacity-80 transition-opacity
               "
               style={{
-                backgroundColor: 'var(--clay-content-bg)',
-                color: 'var(--clay-content-text)',
+                backgroundColor: 'var(--pastel-content-bg)',
+                color: 'var(--pastel-content-text)',
               }}
               onClick={() => setIsEditingAlias(true)}
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--accent-content)' }}
-              />
-              @{data.alias}
+              <FileText className="w-3 h-3" />
+              {data.alias}
             </span>
           )}
         </div>
@@ -134,7 +133,8 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
               value={data.content || ''}
               onChange={(e) => updateNode(id, { content: e.target.value })}
               placeholder="Enter content or drop a file here..."
-              className="h-full resize-none text-[13px] bg-zinc-50/50 border-zinc-100 focus:border-zinc-200 rounded-lg"
+              className={`h-full resize-none ${inputStyle.background} ${inputStyle.border} ${inputStyle.focusBorder} rounded-lg`}
+              style={{ fontSize: FONT_SIZES.textarea }}
             />
           )}
         </div>

@@ -38,13 +38,13 @@ export function Canvas() {
   const removeNode = useCanvasStore((state) => state.removeNode);
   const addNode = useCanvasStore((state) => state.addNode);
   const addContentNodeWithFile = useCanvasStore((state) => state.addContentNodeWithFile);
-  
+
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes as Node[]);
   const { fitView, screenToFlowPosition } = useReactFlow();
-  
+
   // Get nodes from React Flow internal store for position sync
   const reactFlowNodes = useStore((state) => state.nodes);
-  
+
   // Track node IDs to detect structural changes only
   const prevNodeIdsRef = useRef<string[]>(storeNodes.map(n => n.id));
 
@@ -52,12 +52,12 @@ export function Canvas() {
   useEffect(() => {
     const currentIds = storeNodes.map(n => n.id);
     const prevIds = prevNodeIdsRef.current;
-    
+
     // Check if nodes were added or removed
-    const structureChanged = 
+    const structureChanged =
       currentIds.length !== prevIds.length ||
       !currentIds.every((id, i) => id === prevIds[i]);
-    
+
     if (structureChanged) {
       // Only update position and type info for React Flow
       // Data is read directly from Zustand by node components
@@ -177,7 +177,7 @@ export function Canvas() {
   );
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}
@@ -190,6 +190,8 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={['Backspace', 'Delete']}
+        panOnScroll={true}
+        panOnDrag={true}
       >
         <Background
           variant={BackgroundVariant.Dots}

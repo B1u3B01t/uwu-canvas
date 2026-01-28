@@ -1,7 +1,106 @@
 ---
+description: Guidelines for AI assistants registering components in UWU Canvas
 alwaysApply: false
 ---
-},
+
+# Component Registry Guidelines
+
+Instructions for AI assistants adding components to the UWU Canvas registry.
+
+## Quick Reference
+
+```typescript
+// 1. Import your component
+import { MyComponent } from '@/app/my-app/MyComponent';
+
+// 2. Add to registry
+export const componentRegistry: Record<string, RegistryEntry> = {
+  'my-component': {
+    name: 'My Component',
+    component: MyComponent,
+    category: 'App',
+    description: 'What this component does',
+  },
+};
+```
+
+## Registry Entry Fields
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `name` | Yes | string | Display name in UI dropdown |
+| `component` | Yes | ComponentType | React component reference |
+| `category` | No | string | Grouping category |
+| `description` | No | string | Brief description |
+
+## Component Requirements
+
+### Must Have
+- Default export or named export
+- Work without required props (use defaults)
+- Be a client component (`'use client'` directive)
+
+### Must NOT
+- Be the `/uwu-canvas` page (causes infinite loop)
+- Require external context providers not available in preview
+- Have side effects on mount that break preview
+
+## Step-by-Step Registration
+
+1. **Open registry file**: `lib/registry.ts`
+
+2. **Add import at top**:
+   ```typescript
+   import { YourComponent } from '@/path/to/YourComponent';
+   ```
+
+3. **Add entry to `componentRegistry`**:
+   ```typescript
+   'your-key': {
+     name: 'Your Component',
+     component: YourComponent,
+     category: 'Your Category',
+     description: 'Description here',
+   },
+   ```
+
+4. **Use lowercase-kebab-case for keys**: `my-component`, `user-profile`, etc.
+
+## Example: Full Registration
+
+```typescript
+import type { ComponentType } from 'react';
+import { ExampleComponent } from '../components/examples/ExampleComponent';
+import { DashboardApp } from '@/app/dashboard/DashboardApp';
+import { LoginForm } from '@/app/auth/LoginForm';
+
+export interface RegistryEntry {
+  name: string;
+  component: ComponentType<Record<string, unknown>>;
+  category?: string;
+  description?: string;
+}
+
+export const componentRegistry: Record<string, RegistryEntry> = {
+  'example': {
+    name: 'Example',
+    component: ExampleComponent,
+    category: 'Example',
+    description: 'Example component template',
+  },
+  'dashboard': {
+    name: 'Dashboard',
+    component: DashboardApp,
+    category: 'App',
+    description: 'Main dashboard application',
+  },
+  'login': {
+    name: 'Login Form',
+    component: LoginForm,
+    category: 'Auth',
+    description: 'User authentication form',
+  },
+};
 ```
 
 ## Troubleshooting
@@ -20,3 +119,16 @@ alwaysApply: false
 - Component styles may conflict with canvas
 - Consider wrapping in a container with `isolate` class
 - Check for global styles affecting the component
+
+### Preview Shows Error
+- Check browser console for specific error
+- Verify component renders without props
+- Test component in isolation first
+
+## Tips for AI Assistants
+
+1. **Always check existing imports** before adding new ones
+2. **Use unique keys** - check existing keys first
+3. **Match naming conventions** of existing entries
+4. **Keep descriptions concise** - one sentence max
+5. **Test after registration** by creating a Component node

@@ -8,6 +8,9 @@ export { ContentBox } from './components/nodes/ContentBox';
 export { ComponentBox } from './components/nodes/ComponentBox';
 export { Data2UIBox } from './components/nodes/Data2UIBox';
 
+// Example components
+export { ExampleComponent } from './components/examples/ExampleComponent';
+
 // UI components
 export { AutocompleteTextarea } from './components/ui/Autocomplete';
 

@@ -1,5 +1,6 @@
 'use client';
 
+import './styles.css';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './components/Canvas';
 

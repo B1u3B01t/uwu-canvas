@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Smartphone, Monitor } from 'lucide-react';
+import { Smartphone, Monitor, Layout, Check } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
   Select,
@@ -13,11 +13,32 @@ import {
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { getRegistryKeys, getComponentByKey } from '../../lib/registry';
-import { BOX_DEFAULTS } from '../../lib/constants';
+import { BOX_DEFAULTS, BOX_BACKGROUNDS, RESIZE_HANDLE_SIZE } from '../../lib/constants';
 import type { ComponentNodeData } from '../../lib/types';
+
+interface PromptCopiedMessage {
+  type: 'DYNAMIC_PROMPT_COPIED';
+  payload: {
+    componentName: string;
+    filePath: string;
+  };
+}
+
+function isPromptCopiedMessage(data: unknown): data is PromptCopiedMessage {
+  if (typeof data !== 'object' || data === null) return false;
+  if (!('type' in data) || (data as Record<string, unknown>).type !== 'DYNAMIC_PROMPT_COPIED') return false;
+  if (!('payload' in data)) return false;
+
+  const payload = (data as Record<string, unknown>).payload;
+  if (typeof payload !== 'object' || payload === null) return false;
+
+  const { componentName, filePath } = payload as Record<string, unknown>;
+  return typeof componentName === 'string' && typeof filePath === 'string';
+}
 
 function ComponentBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
+  const [copiedToast, setCopiedToast] = useState<string | null>(null);
 
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
@@ -26,6 +47,23 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   });
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+
+  // Listen for prompt copied notifications from iframe
+  useEffect(() => {
+    if (!data?.componentKey) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (isPromptCopiedMessage(event.data)) {
+        const { componentName } = event.data.payload;
+        setCopiedToast(componentName);
+        // Auto-hide toast after 3 seconds
+        setTimeout(() => setCopiedToast(null), 3000);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [data?.componentKey]);
 
   // Early return if node data not found
   if (!data) return null;
@@ -51,7 +89,13 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
         minHeight={400}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
+        handleClassName="!border !rounded-full"
+        handleStyle={{
+          width: RESIZE_HANDLE_SIZE,
+          height: RESIZE_HANDLE_SIZE,
+          backgroundColor: 'var(--accent-component)',
+          borderColor: 'var(--accent-component)',
+        }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
@@ -59,24 +103,16 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
       <div
         className="
           relative flex flex-col
-          bg-white/80 backdrop-blur-md
-          rounded-2xl
-          border border-white/60
+          backdrop-blur-md
+          rounded-3xl
           transition-all duration-150
-          hover:shadow-[var(--shadow-node-hover)]
         "
         style={{
           width: data.width,
           height: data.height,
-          boxShadow: 'var(--shadow-node)',
+          backgroundColor: BOX_BACKGROUNDS.component,
         }}
       >
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-          style={{ backgroundColor: 'var(--accent-component)' }}
-        />
-
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
@@ -92,21 +128,18 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
             <span
               className="
                 group flex items-center gap-1.5
-                cursor-pointer rounded-md px-2 py-0.5
+                cursor-pointer rounded-full px-2.5 py-1
                 font-mono text-[11px]
                 hover:opacity-80 transition-opacity
               "
               style={{
-                backgroundColor: 'var(--clay-component-bg)',
-                color: 'var(--clay-component-text)',
+                backgroundColor: 'var(--pastel-component-bg)',
+                color: 'var(--pastel-component-text)',
               }}
               onClick={() => setIsEditingAlias(true)}
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--accent-component)' }}
-              />
-              @{data.alias}
+              <Layout className="w-3 h-3" />
+              {data.alias}
             </span>
           )}
 
@@ -167,6 +200,22 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
               <Monitor className="h-3 w-3" />
             </button>
           </div>
+
+          {/* Toast notification when prompt is copied */}
+          {copiedToast && (
+            <div
+              className="
+                h-5 px-2 rounded-full
+                bg-emerald-500 text-white
+                text-[10px] font-medium
+                flex items-center gap-1
+                animate-in fade-in slide-in-from-right-2 duration-200
+              "
+            >
+              <Check className="h-3 w-3" />
+              {copiedToast} prompt copied!
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -178,6 +227,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
                 className="h-full w-full border-0"
                 style={{ width: '100%', height: '100%' }}
                 title={selectedComponent.name}
+                allow="clipboard-read; clipboard-write"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-[13px] text-zinc-400">
@@ -189,6 +239,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           </div>
         </div>
       </div>
+
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowRight, Database } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
   Select,
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
+import { BOX_BACKGROUNDS, RESIZE_HANDLE_SIZE } from '../../lib/constants';
 import type { Data2UINodeData, GeneratorNodeData } from '../../lib/types';
 
 // Type for recent memories format
@@ -98,7 +99,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
 
   // Track previous isRunning state of source generator for auto-apply
-  const prevSourceIsRunningRef = useRef<boolean | null>(null);
+  const prevSourceIsRunningRef = useRef<boolean>(false);
 
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
@@ -222,7 +223,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   useEffect(() => {
     if (!data || !data.sourceAlias || !data.outputPath || !sourceGeneratorData) {
       // Reset tracking if source is not available
-      prevSourceIsRunningRef.current = null;
+      prevSourceIsRunningRef.current = false;
       return;
     }
 
@@ -255,7 +256,13 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         minHeight={190}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!w-2.5 !h-2.5 !bg-white !border !border-zinc-200 !rounded-full"
+        handleClassName="!border !rounded-full"
+        handleStyle={{
+          width: RESIZE_HANDLE_SIZE,
+          height: RESIZE_HANDLE_SIZE,
+          backgroundColor: 'var(--accent-data2ui)',
+          borderColor: 'var(--accent-data2ui)',
+        }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
         }}
@@ -263,24 +270,16 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
       <div
         className="
           relative
-          bg-white/80 backdrop-blur-md
-          rounded-2xl
-          border border-white/60
+          backdrop-blur-md
+          rounded-3xl
           transition-all duration-150
-          hover:shadow-[var(--shadow-node-hover)]
         "
         style={{
           width: data.width,
           height: data.height,
-          boxShadow: 'var(--shadow-node)',
+          backgroundColor: BOX_BACKGROUNDS.data2ui,
         }}
       >
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-          style={{ backgroundColor: 'var(--accent-data2ui)' }}
-        />
-
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
@@ -296,21 +295,18 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
             <span
               className="
                 group flex items-center gap-1.5
-                cursor-pointer rounded-md px-2 py-0.5
+                cursor-pointer rounded-full px-2.5 py-1
                 font-mono text-[11px]
                 hover:opacity-80 transition-opacity
               "
               style={{
-                backgroundColor: 'var(--clay-data2ui-bg)',
-                color: 'var(--clay-data2ui-text)',
+                backgroundColor: 'var(--pastel-data2ui-bg)',
+                color: 'var(--pastel-data2ui-text)',
               }}
               onClick={() => setIsEditingAlias(true)}
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--accent-data2ui)' }}
-              />
-              @{data.alias}
+              <Database className="w-3 h-3" />
+              {data.alias}
             </span>
           )}
         </div>
