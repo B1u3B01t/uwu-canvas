@@ -10,6 +10,7 @@ interface AutocompleteTextareaProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  style?: React.CSSProperties;
   disabled?: boolean;
 }
 
@@ -18,6 +19,7 @@ export function AutocompleteTextarea({
   onChange,
   placeholder = 'Type @ to reference other boxes...',
   className = '',
+  style,
   disabled = false,
 }: AutocompleteTextareaProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -112,6 +114,7 @@ export function AutocompleteTextarea({
             placeholder={placeholder}
             disabled={disabled}
             className={`w-full resize-none rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+            style={style}
             rows={4}
           />
         </PopoverAnchor>

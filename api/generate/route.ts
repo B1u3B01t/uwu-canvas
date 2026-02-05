@@ -1,4 +1,4 @@
-import { streamText, type CoreMessage, type TextPart, type ImagePart, type FilePart } from 'ai';
+import { streamText, type ModelMessage, type TextPart, type ImagePart, type FilePart } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
@@ -33,13 +33,13 @@ function getModel(provider: Provider, modelId: string) {
 }
 
 // Convert client message parts to AI SDK format
-function convertToAISDKMessages(clientMessages: ClientMessage[]): CoreMessage[] {
+function convertToAISDKMessages(clientMessages: ClientMessage[]): ModelMessage[] {
   return clientMessages.map((msg) => {
     if (typeof msg.content === 'string') {
       return {
         role: msg.role,
         content: msg.content,
-      } as CoreMessage;
+      } as ModelMessage;
     }
 
     // Handle multi-part content
@@ -58,7 +58,7 @@ function convertToAISDKMessages(clientMessages: ClientMessage[]): CoreMessage[] 
         return {
           type: 'file',
           data: part.data!, // base64 string
-          mimeType: part.mimeType!,
+          mediaType: part.mimeType!, // AI SDK v6 uses mediaType
         } as FilePart;
       }
       // Fallback
@@ -68,7 +68,7 @@ function convertToAISDKMessages(clientMessages: ClientMessage[]): CoreMessage[] 
     return {
       role: msg.role,
       content: contentParts,
-    } as CoreMessage;
+    } as ModelMessage;
   });
 }
 
