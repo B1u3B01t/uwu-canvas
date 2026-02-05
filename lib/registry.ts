@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { ExampleComponent } from '../components/examples/ExampleComponent';
+import Home from '@/app/page';
 
 // Component registry entry
 export interface RegistryEntry {
@@ -43,6 +44,12 @@ export const componentRegistry: Record<string, RegistryEntry> = {
     component: ExampleComponent,
     category: 'Example',
     description: 'Example component to demonstrate the registry pattern',
+  },
+  'home': {
+    name: 'Home',
+    component: Home,
+    category: 'App',
+    description: 'AI UX Patterns discovery engine homepage',
   },
   // Add your components here:
   // 'your-component-key': {
