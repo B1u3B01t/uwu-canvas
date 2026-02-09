@@ -6,7 +6,10 @@ import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData,
 import { BOX_DEFAULTS, ALIAS_PREFIXES } from '../lib/constants';
 
 const STORAGE_KEY = 'uwu-canvas-storage';
+const DARK_MODE_KEY = 'uwu-canvas-dark-mode';
+const STORAGE_VERSION = 1;
 const AUTO_SAVE_DELAY = 1000; // 1 second debounce
+const UNDO_TIMEOUT = 5000; // 5 seconds to undo
 
 interface CanvasStore {
   // State
@@ -20,6 +23,10 @@ interface CanvasStore {
   };
   isDarkMode: boolean;
 
+  // Deletion animation & undo
+  deletingNodeIds: Set<string>;
+  lastDeletedNode: CanvasNode | null;
+
   // Theme
   toggleDarkMode: () => void;
 
@@ -28,51 +35,72 @@ interface CanvasStore {
   addContentNodeWithFile: (fileData: { fileName: string; fileType: string; fileSize: number; data: string }, position?: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<CanvasNode['data']>) => void;
   removeNode: (nodeId: string) => void;
+  markNodeForDeletion: (nodeId: string) => void;
+  undoDelete: () => void;
+  clearUndoState: () => void;
   setNodes: (nodes: CanvasNode[]) => void;
-  
+
   // Selection
   selectNode: (nodeId: string | null) => void;
-  
+
   // Alias resolution
   getAliasMap: () => AliasMap;
   resolveAlias: (alias: string) => string;
   resolveAllAliases: (text: string) => string;
   buildMessageContent: (text: string) => MessageContentPart[];
   getNodeByAlias: (alias: string) => CanvasNode | undefined;
-  
+
   // Generator specific
   setGeneratorOutput: (nodeId: string, output: string) => void;
   setGeneratorRunning: (nodeId: string, isRunning: boolean) => void;
-  
+  setGeneratorError: (nodeId: string, error: string) => void;
+  clearGeneratorError: (nodeId: string) => void;
+
   // Storage
   saveToStorage: () => void;
   loadFromStorage: () => void;
-  
+
   // Clear
   clearCanvas: () => void;
 }
 
 const generateId = () => `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Load initial state from localStorage
+// Load dark mode preference from localStorage
+const getInitialDarkMode = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(DARK_MODE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+// Load initial state from localStorage with version migration
 const getInitialState = () => {
   if (typeof window === 'undefined') {
     return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
   }
-  
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return {
-        nodes: parsed.nodes || [],
-        counters: parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 },
-      };
+      // Handle versioned and legacy formats
+      const nodes = parsed.nodes || [];
+      const counters = parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 };
+
+      // Migrate legacy format (no version field) to versioned
+      if (!parsed.version) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, nodes, counters }));
+      }
+
+      return { nodes, counters };
     }
   } catch {
     // Ignore parse errors
   }
-  
+
   return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
 };
 
@@ -83,29 +111,44 @@ let saveTimeout: NodeJS.Timeout | null = null;
 
 const debouncedSave = (nodes: CanvasNode[], counters: CanvasStore['counters']) => {
   if (typeof window === 'undefined') return;
-  
+
   if (saveTimeout) {
     clearTimeout(saveTimeout);
   }
-  
+
   saveTimeout = setTimeout(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, counters }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, nodes, counters }));
     } catch {
       // Ignore storage errors
     }
   }, AUTO_SAVE_DELAY);
 };
 
+// Timer for undo expiry
+let undoTimeout: NodeJS.Timeout | null = null;
+
 export const useCanvasStore = create<CanvasStore>()(
   subscribeWithSelector((set, get) => ({
   nodes: initialState.nodes,
   selectedNodeId: null,
   counters: initialState.counters,
-  isDarkMode: false,
+  isDarkMode: getInitialDarkMode(),
+
+  // Deletion animation & undo
+  deletingNodeIds: new Set<string>(),
+  lastDeletedNode: null,
 
   toggleDarkMode: () => {
-    set({ isDarkMode: !get().isDarkMode });
+    const newValue = !get().isDarkMode;
+    set({ isDarkMode: newValue });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(DARK_MODE_KEY, String(newValue));
+      } catch {
+        // Ignore storage errors
+      }
+    }
   },
 
   addNode: (type, position = { x: 100, y: 100 }) => {
@@ -223,10 +266,66 @@ export const useCanvasStore = create<CanvasStore>()(
   },
 
   removeNode: (nodeId) => {
+    const nodeToDelete = get().nodes.find((node) => node.id === nodeId);
+
+    // Save for undo
+    if (nodeToDelete) {
+      // Clear any previous undo timeout
+      if (undoTimeout) {
+        clearTimeout(undoTimeout);
+      }
+
+      set({
+        lastDeletedNode: nodeToDelete,
+      });
+
+      // Auto-clear undo state after timeout
+      undoTimeout = setTimeout(() => {
+        set({ lastDeletedNode: null });
+        undoTimeout = null;
+      }, UNDO_TIMEOUT);
+    }
+
     set({
       nodes: get().nodes.filter((node) => node.id !== nodeId),
+      deletingNodeIds: new Set([...get().deletingNodeIds].filter(id => id !== nodeId)),
       selectedNodeId: get().selectedNodeId === nodeId ? null : get().selectedNodeId,
     });
+  },
+
+  markNodeForDeletion: (nodeId) => {
+    const newSet = new Set(get().deletingNodeIds);
+    newSet.add(nodeId);
+    set({ deletingNodeIds: newSet });
+
+    // After animation, actually remove
+    setTimeout(() => {
+      get().removeNode(nodeId);
+    }, 200);
+  },
+
+  undoDelete: () => {
+    const { lastDeletedNode, nodes } = get();
+    if (!lastDeletedNode) return;
+
+    // Clear the undo timeout
+    if (undoTimeout) {
+      clearTimeout(undoTimeout);
+      undoTimeout = null;
+    }
+
+    set({
+      nodes: [...nodes, lastDeletedNode],
+      lastDeletedNode: null,
+    });
+  },
+
+  clearUndoState: () => {
+    if (undoTimeout) {
+      clearTimeout(undoTimeout);
+      undoTimeout = null;
+    }
+    set({ lastDeletedNode: null });
   },
 
   setNodes: (nodes) => {
@@ -240,7 +339,7 @@ export const useCanvasStore = create<CanvasStore>()(
   getAliasMap: () => {
     const { nodes } = get();
     const map: AliasMap = {};
-    
+
     nodes.forEach((node) => {
       const data = node.data;
       let value = '';
@@ -255,14 +354,14 @@ export const useCanvasStore = create<CanvasStore>()(
       } else if (data.type === 'data2ui') {
         value = `[Data2UI: ${data.outputPath}]`;
       }
-      
+
       map[data.alias] = {
         nodeId: node.id,
         type: data.type,
         value,
       };
     });
-    
+
     return map;
   },
 
@@ -414,7 +513,7 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: get().nodes.map((node) =>
         node.id === nodeId && node.data.type === 'generator'
-          ? { ...node, data: { ...node.data, output } }
+          ? { ...node, data: { ...node.data, output, error: undefined } }
           : node
       ) as CanvasNode[],
     });
@@ -430,10 +529,30 @@ export const useCanvasStore = create<CanvasStore>()(
     });
   },
 
+  setGeneratorError: (nodeId, error) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === nodeId && node.data.type === 'generator'
+          ? { ...node, data: { ...node.data, error, output: '' } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  clearGeneratorError: (nodeId) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === nodeId && node.data.type === 'generator'
+          ? { ...node, data: { ...node.data, error: undefined } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
   saveToStorage: () => {
     const { nodes, counters } = get();
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, counters }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, nodes, counters }));
     } catch {
       // Ignore storage errors
     }

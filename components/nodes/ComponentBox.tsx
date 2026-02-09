@@ -47,6 +47,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   });
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
 
   // Listen for prompt copied notifications from iframe
   useEffect(() => {
@@ -84,12 +85,13 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
 
   return (
     <div
-        className="
+        className={`
           relative flex flex-col
           backdrop-blur-md
           rounded-3xl
           transition-all duration-150
-        "
+          ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
+        `}
         style={{
           width: data.width,
           height: data.height,

@@ -13,6 +13,7 @@ export interface GeneratorNodeData extends BaseNodeData {
   input: string;
   output: string;
   isRunning: boolean;
+  error?: string;
   provider?: AIProvider;  // Set when providers are fetched
   model?: string;         // Set when providers are fetched
 }

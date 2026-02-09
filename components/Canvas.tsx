@@ -12,6 +12,7 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Undo2, Sparkles } from 'lucide-react';
 
 import { GeneratorBox } from './nodes/GeneratorBox';
 import { ContentBox } from './nodes/ContentBox';
@@ -36,9 +37,12 @@ export function Canvas() {
   const setStoreNodes = useCanvasStore((state) => state.setNodes);
   const selectNode = useCanvasStore((state) => state.selectNode);
   const removeNode = useCanvasStore((state) => state.removeNode);
+  const markNodeForDeletion = useCanvasStore((state) => state.markNodeForDeletion);
   const addNode = useCanvasStore((state) => state.addNode);
   const addContentNodeWithFile = useCanvasStore((state) => state.addContentNodeWithFile);
   const isDarkMode = useCanvasStore((state) => state.isDarkMode);
+  const lastDeletedNode = useCanvasStore((state) => state.lastDeletedNode);
+  const undoDelete = useCanvasStore((state) => state.undoDelete);
 
   // Get theme colors based on dark mode
   const themeColors = isDarkMode ? CANVAS_CONFIG.dark : CANVAS_CONFIG.light;
@@ -90,13 +94,17 @@ export function Canvas() {
   // Handle node changes (position, selection, removal, etc.)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Handle remove changes - sync to Zustand store BEFORE React Flow processes them
+      // Handle remove changes - use animated deletion
       const removeChanges = changes.filter((change) => change.type === 'remove');
-      removeChanges.forEach((change) => {
-        if (change.type === 'remove') {
-          removeNode(change.id);
-        }
-      });
+      if (removeChanges.length > 0) {
+        removeChanges.forEach((change) => {
+          if (change.type === 'remove') {
+            markNodeForDeletion(change.id);
+          }
+        });
+        // Filter out remove changes - we handle deletion ourselves after animation
+        changes = changes.filter((change) => change.type !== 'remove');
+      }
 
       onNodesChange(changes);
 
@@ -117,7 +125,7 @@ export function Canvas() {
         }
       });
     },
-    [onNodesChange, selectNode, removeNode, syncPositionsToStore]
+    [onNodesChange, selectNode, markNodeForDeletion, syncPositionsToStore]
   );
 
   // Fit view on initial load if there are nodes
@@ -182,7 +190,7 @@ export function Canvas() {
 
   return (
     <div
-      className="h-full w-full relative transition-colors duration-300"
+      className={`h-full w-full relative transition-colors duration-300 ${isDarkMode ? 'uwu-dark' : ''}`}
       style={{ background: themeColors.background }}
     >
       <ReactFlow
@@ -208,6 +216,49 @@ export function Canvas() {
         />
         <Toolbar />
       </ReactFlow>
+
+      {/* Empty Canvas State */}
+      {storeNodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="text-center">
+            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4 ${isDarkMode ? 'bg-zinc-800/50' : 'bg-zinc-100/80'}`}>
+              <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`} />
+            </div>
+            <p className={`text-[15px] font-medium ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+              Drop a Generator node to start prompting AI
+            </p>
+            <p className={`text-[13px] mt-1 ${isDarkMode ? 'text-zinc-600' : 'text-zinc-400'}`}>
+              or drag a file onto the canvas
+            </p>
+            <p className={`text-[11px] mt-3 ${isDarkMode ? 'text-zinc-700' : 'text-zinc-300'}`}>
+              Press Delete or Backspace to remove nodes
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Undo Delete Toast */}
+      {lastDeletedNode && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 uwu-undo-toast">
+          <button
+            onClick={undoDelete}
+            className={`
+              flex items-center gap-2 px-4 py-2.5 rounded-xl
+              text-[13px] font-medium
+              shadow-lg backdrop-blur-md
+              transition-all duration-150
+              active:scale-95 cursor-pointer
+              ${isDarkMode
+                ? 'bg-zinc-800/90 text-zinc-200 border border-zinc-700 hover:bg-zinc-700/90'
+                : 'bg-white/90 text-zinc-700 border border-zinc-200 hover:bg-zinc-50/90'
+              }
+            `}
+          >
+            <Undo2 className="w-4 h-4" />
+            Node deleted — Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

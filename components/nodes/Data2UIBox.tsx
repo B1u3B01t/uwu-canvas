@@ -109,6 +109,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
 
   const updateNode = useCanvasStore((state) => state.updateNode);
   const getAliasMap = useCanvasStore((state) => state.getAliasMap);
+  const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
 
   // Fetch JSON files on mount - must be before early return
   useEffect(() => {
@@ -266,12 +267,13 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <div
-        className="
+        className={`
           relative
           backdrop-blur-md
           rounded-3xl
           transition-all duration-150
-        "
+          ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
+        `}
         style={{
           width: data.width,
           height: data.height,

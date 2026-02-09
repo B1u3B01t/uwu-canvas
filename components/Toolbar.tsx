@@ -7,10 +7,10 @@ import { Tooltip, TooltipProvider } from './ui/Tooltip';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 
 const BOX_TYPES = [
-  { type: 'generator' as const, label: 'Generator', icon: Sparkles, accent: 'var(--accent-generator)' },
-  { type: 'content' as const, label: 'Content', icon: FileText, accent: 'var(--accent-content)' },
-  { type: 'component' as const, label: 'Component', icon: Layout, accent: 'var(--accent-component)' },
-  { type: 'data2ui' as const, label: 'Data2UI', icon: Database, accent: 'var(--accent-data2ui)' },
+  { type: 'generator' as const, label: 'Generator — AI prompt box', icon: Sparkles, accent: 'var(--accent-generator)' },
+  { type: 'content' as const, label: 'Content — Text or file', icon: FileText, accent: 'var(--accent-content)' },
+  { type: 'component' as const, label: 'Component — Live preview', icon: Layout, accent: 'var(--accent-component)' },
+  { type: 'data2ui' as const, label: 'Data2UI — Pipe to JSON file', icon: Database, accent: 'var(--accent-data2ui)' },
 ] as const;
 
 // Color mapping for spreading effect

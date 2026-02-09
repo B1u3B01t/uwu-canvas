@@ -20,6 +20,7 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
   });
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
 
   // Early return if node data not found
   if (!data) return null;
@@ -44,12 +45,13 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <div
-        className="
+        className={`
           relative
           backdrop-blur-md
           rounded-3xl
           transition-all duration-150
-        "
+          ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
+        `}
         style={{
           width: data.width,
           height: data.height,

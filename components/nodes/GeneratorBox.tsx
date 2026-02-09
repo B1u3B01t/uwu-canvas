@@ -1,8 +1,9 @@
 'use client';
 
-import { memo, useState, useCallback, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Play, Square, Sparkles } from 'lucide-react';
+import { Play, Square, Sparkles, Copy, Check, AlertCircle, RotateCcw, Code, Eye } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { Input } from '../ui/input';
 import {
   Select,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { AutocompleteTextarea } from '../ui/Autocomplete';
+import { Toggle } from '../ui/toggle';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE } from '../../lib/constants';
 import type { GeneratorNodeData, AIProvider } from '../../lib/types';
@@ -35,6 +37,10 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
   const [providersData, setProvidersData] = useState<ProvidersMap>(cachedProviders || {});
   const [isLoadingProviders, setIsLoadingProviders] = useState(!providersFetched);
+  const [copied, setCopied] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
+  const prevIsRunningRef = useRef(false);
 
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
@@ -42,9 +48,13 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
     return node?.data as GeneratorNodeData | undefined;
   });
 
+  const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
+
   const updateNode = useCanvasStore((state) => state.updateNode);
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
+  const setGeneratorError = useCanvasStore((state) => state.setGeneratorError);
+  const clearGeneratorError = useCanvasStore((state) => state.clearGeneratorError);
   const buildMessageContent = useCanvasStore((state) => state.buildMessageContent);
 
   const providerKeys = Object.keys(providersData);
@@ -58,6 +68,20 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const currentModel = currentProviderData
     ? (data?.model && currentProviderData.models.some(m => m.id === data.model) ? data.model : currentProviderData.models[0]?.id)
     : undefined;
+
+  // Detect generation completion for border pulse
+  useEffect(() => {
+    if (!data) return;
+    const wasRunning = prevIsRunningRef.current;
+    const isRunning = data.isRunning;
+
+    if (wasRunning && !isRunning && data.output) {
+      setJustCompleted(true);
+      const timer = setTimeout(() => setJustCompleted(false), 600);
+      return () => clearTimeout(timer);
+    }
+    prevIsRunningRef.current = isRunning;
+  }, [data?.isRunning, data?.output]);
 
   // Fetch available providers on mount
   useEffect(() => {
@@ -101,6 +125,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const handleRun = useCallback(async () => {
     if (!data || data.isRunning) return;
 
+    clearGeneratorError(id);
     setGeneratorRunning(id, true);
     setGeneratorOutput(id, '');
 
@@ -156,15 +181,22 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
       }
     } catch (error) {
       console.error('Generation error:', error);
-      setGeneratorOutput(id, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setGeneratorError(id, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setGeneratorRunning(id, false);
     }
-  }, [id, data, currentProvider, currentModel, buildMessageContent, setGeneratorOutput, setGeneratorRunning]);
+  }, [id, data, currentProvider, currentModel, buildMessageContent, setGeneratorOutput, setGeneratorRunning, setGeneratorError, clearGeneratorError]);
 
   const handleStop = useCallback(() => {
     setGeneratorRunning(id, false);
   }, [id, setGeneratorRunning]);
+
+  const handleCopy = useCallback(() => {
+    if (!data?.output) return;
+    navigator.clipboard.writeText(data.output);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [data?.output]);
 
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
@@ -189,12 +221,14 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         }}
       />
       <div
-        className="
+        className={`
           relative
           backdrop-blur-md
           rounded-3xl
           transition-all duration-150
-        "
+          ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
+          ${justCompleted ? 'uwu-node-complete' : ''}
+        `}
         style={{
           width: data.width,
           height: data.height,
@@ -236,7 +270,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
             <span className="text-[10px] text-zinc-400">...</span>
           ) : !hasProviders ? (
             <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600">
-              No provider
+              No provider — add API keys to .env.local
             </span>
           ) : currentProvider && currentProviderData ? (
             <>
@@ -316,14 +350,77 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
 
           {/* Output Section */}
           <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Output</label>
-            <div className={`flex-1 overflow-auto rounded-lg border ${inputStyle.border} ${inputStyle.background} p-2.5`}>
-              {data.output ? (
-                <pre className="whitespace-pre-wrap text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>{data.output}</pre>
-              ) : (
-                <p className="text-zinc-400 italic" style={{ fontSize: FONT_SIZES.output }}>Output will appear here...</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Output</label>
+                {data.isRunning && (
+                  <span className="uwu-pulse-dot" />
+                )}
+              </div>
+              {data.output && !data.isRunning && (
+                <div className="flex items-center gap-0.5">
+                  <Toggle
+                    pressed={showRaw}
+                    onPressedChange={setShowRaw}
+                    size="sm"
+                    aria-label={showRaw ? 'Show formatted' : 'Show raw markdown'}
+                  >
+                    {showRaw ? (
+                      <Eye className="h-3.5 w-3.5" />
+                    ) : (
+                      <Code className="h-3.5 w-3.5" />
+                    )}
+                  </Toggle>
+                  <button
+                    onClick={handleCopy}
+                    className="h-6 w-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all duration-150"
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
               )}
             </div>
+
+            {/* Error State */}
+            {data.error ? (
+              <div className="flex-1 overflow-auto rounded-lg border border-red-200 bg-red-50 p-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] text-red-600 font-medium">Generation failed</p>
+                    <p className="text-[12px] text-red-500 mt-0.5">{data.error}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleRun}
+                  disabled={!hasProviders || isLoadingProviders}
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <div className={`flex-1 overflow-auto rounded-lg border ${inputStyle.border} ${inputStyle.background} p-2.5`}>
+                {data.output ? (
+                  showRaw ? (
+                    <pre className="whitespace-pre-wrap break-words font-mono text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>
+                      {data.output}
+                    </pre>
+                  ) : (
+                    <div className="uwu-markdown" style={{ fontSize: FONT_SIZES.output }}>
+                      <ReactMarkdown>{data.output}</ReactMarkdown>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-zinc-400 italic" style={{ fontSize: FONT_SIZES.output }}>Output will appear here...</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
