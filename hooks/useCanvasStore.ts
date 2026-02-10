@@ -29,6 +29,11 @@ interface CanvasStore {
   deletingNodeIds: Set<string>;
   lastDeletedNode: CanvasNode | null;
 
+  // Duplicate alias toast
+  duplicateAliasToast: string | null;
+  showDuplicateAliasToast: (alias: string) => void;
+  isAliasUnique: (alias: string, nodeId: string) => boolean;
+
   // Theme
   toggleDarkMode: () => void;
 
@@ -153,6 +158,21 @@ export const useCanvasStore = create<CanvasStore>()(
   deletingNodeIds: new Set<string>(),
   lastDeletedNode: null,
 
+  // Duplicate alias toast
+  duplicateAliasToast: null,
+
+  showDuplicateAliasToast: (alias) => {
+    set({ duplicateAliasToast: alias });
+    setTimeout(() => {
+      set({ duplicateAliasToast: null });
+    }, 2500);
+  },
+
+  isAliasUnique: (alias, nodeId) => {
+    const { nodes } = get();
+    return !nodes.some((node) => node.id !== nodeId && node.data.alias === alias);
+  },
+
   toggleDarkMode: () => {
     const newValue = !get().isDarkMode;
     set({ isDarkMode: newValue });
@@ -167,7 +187,12 @@ export const useCanvasStore = create<CanvasStore>()(
 
   addNode: (type, position = { x: 100, y: 100 }) => {
     const { counters, nodes } = get();
-    const newCount = counters[type] + 1;
+    const existingAliases = new Set(nodes.map((n) => n.data.alias));
+    let newCount = counters[type] + 1;
+    // Ensure the generated alias is unique
+    while (existingAliases.has(`${ALIAS_PREFIXES[type]}-${newCount}`)) {
+      newCount++;
+    }
     const id = generateId();
 
     let newNode: CanvasNode;
@@ -265,7 +290,11 @@ export const useCanvasStore = create<CanvasStore>()(
 
   addContentNodeWithFile: (fileData, position = { x: 100, y: 100 }) => {
     const { counters, nodes } = get();
-    const newCount = counters.content + 1;
+    const existingAliases = new Set(nodes.map((n) => n.data.alias));
+    let newCount = counters.content + 1;
+    while (existingAliases.has(`${ALIAS_PREFIXES.content}-${newCount}`)) {
+      newCount++;
+    }
     const id = generateId();
 
     const newNode: CanvasNode = {

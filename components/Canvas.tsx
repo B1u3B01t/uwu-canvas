@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  SelectionMode,
   useNodesState,
   useReactFlow,
   useStore,
@@ -12,7 +13,7 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Undo2, Sparkles } from 'lucide-react';
+import { Undo2, Sparkles, AlertTriangle } from 'lucide-react';
 
 import { GeneratorBox } from './nodes/GeneratorBox';
 import { ContentBox } from './nodes/ContentBox';
@@ -46,6 +47,38 @@ export function Canvas() {
   const isDarkMode = useCanvasStore((state) => state.isDarkMode);
   const lastDeletedNode = useCanvasStore((state) => state.lastDeletedNode);
   const undoDelete = useCanvasStore((state) => state.undoDelete);
+  const duplicateAliasToast = useCanvasStore((state) => state.duplicateAliasToast);
+
+  // Track spacebar for pan mode (Figma-style: Space+drag = pan, plain drag = select)
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        // Don't hijack space when typing in inputs/textareas
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+        e.preventDefault();
+        setIsSpacePressed(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpacePressed(false);
+      }
+    };
+    // Reset if window loses focus while space is held
+    const handleBlur = () => setIsSpacePressed(false);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   // Derive visible nodes via useMemo — filters out children of collapsed folders
   // This avoids the infinite re-render loop caused by calling .filter() inside a Zustand selector
@@ -207,7 +240,7 @@ export function Canvas() {
   return (
     <CanvasContextMenu>
     <div
-      className={`h-full w-full relative transition-colors duration-300 ${isDarkMode ? 'uwu-dark' : ''}`}
+      className={`h-full w-full relative transition-colors duration-300 ${isDarkMode ? 'uwu-dark' : ''} ${isSpacePressed ? 'uwu-panning' : ''}`}
       style={{ background: themeColors.background }}
     >
       <ReactFlow
@@ -223,7 +256,9 @@ export function Canvas() {
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={['Backspace', 'Delete']}
         panOnScroll={true}
-        panOnDrag={true}
+        panOnDrag={isSpacePressed}
+        selectionOnDrag={!isSpacePressed}
+        selectionMode={SelectionMode.Partial}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -274,6 +309,26 @@ export function Canvas() {
             <Undo2 className="w-4 h-4" />
             Node deleted — Undo
           </button>
+        </div>
+      )}
+
+      {/* Duplicate Alias Toast */}
+      {duplicateAliasToast && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 uwu-undo-toast">
+          <div
+            className={`
+              flex items-center gap-2 px-4 py-2.5 rounded-xl
+              text-[13px] font-medium
+              shadow-lg backdrop-blur-md
+              ${isDarkMode
+                ? 'bg-zinc-800/90 text-zinc-200 border border-zinc-700'
+                : 'bg-white/90 text-zinc-700 border border-zinc-200'
+              }
+            `}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+            Alias &ldquo;{duplicateAliasToast}&rdquo; already exists
+          </div>
         </div>
       )}
     </div>

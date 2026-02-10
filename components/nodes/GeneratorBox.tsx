@@ -35,6 +35,7 @@ let providersFetched = false;
 
 function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
+  const [editingAlias, setEditingAlias] = useState('');
   const [providersData, setProvidersData] = useState<ProvidersMap>(cachedProviders || {});
   const [isLoadingProviders, setIsLoadingProviders] = useState(!providersFetched);
   const [copied, setCopied] = useState(false);
@@ -51,11 +52,25 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isAliasUnique = useCanvasStore((state) => state.isAliasUnique);
+  const showDuplicateAliasToast = useCanvasStore((state) => state.showDuplicateAliasToast);
   const setGeneratorOutput = useCanvasStore((state) => state.setGeneratorOutput);
   const setGeneratorRunning = useCanvasStore((state) => state.setGeneratorRunning);
   const setGeneratorError = useCanvasStore((state) => state.setGeneratorError);
   const clearGeneratorError = useCanvasStore((state) => state.clearGeneratorError);
   const buildMessageContent = useCanvasStore((state) => state.buildMessageContent);
+
+  const commitAlias = useCallback(() => {
+    const trimmed = editingAlias.trim();
+    if (trimmed && trimmed !== data?.alias) {
+      if (isAliasUnique(trimmed, id)) {
+        updateNode(id, { alias: trimmed });
+      } else {
+        showDuplicateAliasToast(trimmed);
+      }
+    }
+    setIsEditingAlias(false);
+  }, [editingAlias, data?.alias, id, isAliasUnique, updateNode, showDuplicateAliasToast]);
 
   const providerKeys = Object.keys(providersData);
   const hasProviders = providerKeys.length > 0;
@@ -239,10 +254,10 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
             <Input
-              value={data.alias}
-              onChange={(e) => updateNode(id, { alias: e.target.value })}
-              onBlur={() => setIsEditingAlias(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              value={editingAlias}
+              onChange={(e) => setEditingAlias(e.target.value)}
+              onBlur={() => commitAlias()}
+              onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
               className="h-5 w-20 text-[11px] font-mono"
               autoFocus
             />
@@ -258,7 +273,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                 backgroundColor: 'var(--pastel-generator-bg)',
                 color: 'var(--pastel-generator-text)',
               }}
-              onClick={() => setIsEditingAlias(true)}
+              onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Sparkles className="w-3 h-3" />
               {data.alias}

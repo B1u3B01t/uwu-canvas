@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { ChevronDown, ChevronRight, X, Sparkles, FileText, Layout, Database, MoreVertical } from 'lucide-react';
@@ -34,6 +34,7 @@ function NodeTypeIcon({ type }: { type: string }) {
 
 function FolderBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
+  const [editingAlias, setEditingAlias] = useState('');
 
   const data = useCanvasStore((state) => {
     const node = state.nodes.find((n) => n.id === id);
@@ -53,11 +54,25 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
   );
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isAliasUnique = useCanvasStore((state) => state.isAliasUnique);
+  const showDuplicateAliasToast = useCanvasStore((state) => state.showDuplicateAliasToast);
   const removeNodeFromFolder = useCanvasStore((state) => state.removeNodeFromFolder);
   const toggleFolderExpanded = useCanvasStore((state) => state.toggleFolderExpanded);
   const setFolderColor = useCanvasStore((state) => state.setFolderColor);
   const selectNode = useCanvasStore((state) => state.selectNode);
   const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
+
+  const commitAlias = useCallback(() => {
+    const trimmed = editingAlias.trim();
+    if (trimmed && trimmed !== data?.alias) {
+      if (isAliasUnique(trimmed, id)) {
+        updateNode(id, { alias: trimmed });
+      } else {
+        showDuplicateAliasToast(trimmed);
+      }
+    }
+    setIsEditingAlias(false);
+  }, [editingAlias, data?.alias, id, isAliasUnique, updateNode, showDuplicateAliasToast]);
 
   if (!data) return null;
 
@@ -112,10 +127,10 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
 
             {isEditingAlias ? (
               <Input
-                value={data.alias}
-                onChange={(e) => updateNode(id, { alias: e.target.value })}
-                onBlur={() => setIsEditingAlias(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+                value={editingAlias}
+                onChange={(e) => setEditingAlias(e.target.value)}
+                onBlur={() => commitAlias()}
+                onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
                 className="h-5 w-24 text-[11px] font-mono"
                 autoFocus
               />
@@ -131,7 +146,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                   backgroundColor: colors.pastelBg,
                   color: colors.pastelText,
                 }}
-                onClick={() => setIsEditingAlias(true)}
+                onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
               >
                 {data.alias}
               </span>

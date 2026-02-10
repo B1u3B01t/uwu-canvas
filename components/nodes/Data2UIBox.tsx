@@ -92,6 +92,7 @@ function validateRecentMemoriesFormat(data: unknown): { valid: boolean; error?: 
 
 function Data2UIBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
+  const [editingAlias, setEditingAlias] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [applyStatus, setApplyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -108,8 +109,22 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   });
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isAliasUnique = useCanvasStore((state) => state.isAliasUnique);
+  const showDuplicateAliasToast = useCanvasStore((state) => state.showDuplicateAliasToast);
   const getAliasMap = useCanvasStore((state) => state.getAliasMap);
   const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
+
+  const commitAlias = useCallback(() => {
+    const trimmed = editingAlias.trim();
+    if (trimmed && trimmed !== data?.alias) {
+      if (isAliasUnique(trimmed, id)) {
+        updateNode(id, { alias: trimmed });
+      } else {
+        showDuplicateAliasToast(trimmed);
+      }
+    }
+    setIsEditingAlias(false);
+  }, [editingAlias, data?.alias, id, isAliasUnique, updateNode, showDuplicateAliasToast]);
 
   // Fetch JSON files on mount - must be before early return
   useEffect(() => {
@@ -284,10 +299,10 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
             <Input
-              value={data.alias}
-              onChange={(e) => updateNode(id, { alias: e.target.value })}
-              onBlur={() => setIsEditingAlias(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              value={editingAlias}
+              onChange={(e) => setEditingAlias(e.target.value)}
+              onBlur={() => commitAlias()}
+              onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
               className="h-5 w-20 text-[11px] font-mono"
               autoFocus
             />
@@ -303,7 +318,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
                 backgroundColor: 'var(--pastel-data2ui-bg)',
                 color: 'var(--pastel-data2ui-text)',
               }}
-              onClick={() => setIsEditingAlias(true)}
+              onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Database className="w-3 h-3" />
               {data.alias}

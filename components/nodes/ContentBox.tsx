@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
 import { Download, FileText } from 'lucide-react';
 import { Input } from '../ui/input';
@@ -12,6 +12,7 @@ import type { ContentNodeData } from '../../lib/types';
 
 function ContentBoxComponent({ id, selected }: NodeProps) {
   const [isEditingAlias, setIsEditingAlias] = useState(false);
+  const [editingAlias, setEditingAlias] = useState('');
 
   // Read data directly from Zustand for this specific node
   const data = useCanvasStore((state) => {
@@ -20,7 +21,21 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
   });
 
   const updateNode = useCanvasStore((state) => state.updateNode);
+  const isAliasUnique = useCanvasStore((state) => state.isAliasUnique);
+  const showDuplicateAliasToast = useCanvasStore((state) => state.showDuplicateAliasToast);
   const isDeleting = useCanvasStore((state) => state.deletingNodeIds.has(id));
+
+  const commitAlias = useCallback(() => {
+    const trimmed = editingAlias.trim();
+    if (trimmed && trimmed !== data?.alias) {
+      if (isAliasUnique(trimmed, id)) {
+        updateNode(id, { alias: trimmed });
+      } else {
+        showDuplicateAliasToast(trimmed);
+      }
+    }
+    setIsEditingAlias(false);
+  }, [editingAlias, data?.alias, id, isAliasUnique, updateNode, showDuplicateAliasToast]);
 
   // Early return if node data not found
   if (!data) return null;
@@ -62,10 +77,10 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {isEditingAlias ? (
             <Input
-              value={data.alias}
-              onChange={(e) => updateNode(id, { alias: e.target.value })}
-              onBlur={() => setIsEditingAlias(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setIsEditingAlias(false)}
+              value={editingAlias}
+              onChange={(e) => setEditingAlias(e.target.value)}
+              onBlur={() => commitAlias()}
+              onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
               className="h-5 w-24 text-[11px] font-mono"
               autoFocus
             />
@@ -81,7 +96,7 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
                 backgroundColor: 'var(--pastel-content-bg)',
                 color: 'var(--pastel-content-text)',
               }}
-              onClick={() => setIsEditingAlias(true)}
+              onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <FileText className="w-3 h-3" />
               {data.alias}

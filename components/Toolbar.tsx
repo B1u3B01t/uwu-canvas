@@ -52,9 +52,9 @@ export function Toolbar() {
   };
 
   const handleAddNode = (type: 'generator' | 'content' | 'component' | 'data2ui') => {
-    const viewport = document.querySelector('.react-flow__viewport');
-    if (viewport) {
-      const rect = viewport.getBoundingClientRect();
+    const pane = document.querySelector('.react-flow');
+    if (pane) {
+      const rect = pane.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       const position = screenToFlowPosition({ x: centerX, y: centerY });
