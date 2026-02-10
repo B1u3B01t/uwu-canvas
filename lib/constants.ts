@@ -22,6 +22,10 @@ export const BOX_DEFAULTS = {
     width: 320,
     height: 190,
   },
+  folder: {
+    width: 320,
+    height: 280,
+  },
 } as const;
 
 // Node types
@@ -30,6 +34,7 @@ export const NODE_TYPES = {
   CONTENT: 'content',
   COMPONENT: 'component',
   DATA2UI: 'data2ui',
+  FOLDER: 'folder',
 } as const;
 
 // Alias prefixes
@@ -38,6 +43,7 @@ export const ALIAS_PREFIXES = {
   content: 'con',
   component: 'comp',
   data2ui: 'data',
+  folder: 'folder',
 } as const;
 
 // Box background colors
@@ -46,6 +52,7 @@ export const BOX_BACKGROUNDS = {
   content: 'var(--frost-content)',
   component: 'var(--frost-component)',
   data2ui: 'var(--frost-data2ui)',
+  folder: 'var(--frost-folder)',
 } as const;
 
 // Typography sizes
@@ -95,6 +102,18 @@ export const CANVAS_CONFIG = {
 
 // AI Provider keys (models are fetched from API)
 export const AI_PROVIDER_KEYS = ['openai', 'anthropic', 'google'] as const;
+
+// Folder color presets
+export const FOLDER_COLORS = {
+  green:  { tab: '#3D8B4D', body: '#4CAF50', frost: 'oklch(0.97 0.02 145 / 0.6)', pastelBg: 'oklch(0.85 0.12 145)', pastelText: 'oklch(0.25 0.08 145)' },
+  blue:   { tab: '#4D7CF5', body: '#5B8BFF', frost: 'oklch(0.97 0.02 250 / 0.6)', pastelBg: 'oklch(0.85 0.12 250)', pastelText: 'oklch(0.25 0.08 250)' },
+  red:    { tab: '#D84040', body: '#EF5350', frost: 'oklch(0.97 0.02 25 / 0.6)', pastelBg: 'oklch(0.85 0.12 25)', pastelText: 'oklch(0.25 0.08 25)' },
+  yellow: { tab: '#D4A017', body: '#FFCA28', frost: 'oklch(0.97 0.02 85 / 0.6)', pastelBg: 'oklch(0.85 0.12 85)', pastelText: 'oklch(0.25 0.08 85)' },
+  purple: { tab: '#7E3FAF', body: '#9C4DCC', frost: 'oklch(0.97 0.02 300 / 0.6)', pastelBg: 'oklch(0.85 0.12 300)', pastelText: 'oklch(0.25 0.08 300)' },
+  pink:   { tab: '#C94080', body: '#EC5FA0', frost: 'oklch(0.97 0.02 340 / 0.6)', pastelBg: 'oklch(0.85 0.12 340)', pastelText: 'oklch(0.25 0.08 340)' },
+  orange: { tab: '#D47017', body: '#FF9800', frost: 'oklch(0.97 0.02 55 / 0.6)', pastelBg: 'oklch(0.85 0.12 55)', pastelText: 'oklch(0.25 0.08 55)' },
+  gray:   { tab: '#6B7280', body: '#9CA3AF', frost: 'oklch(0.97 0.01 250 / 0.6)', pastelBg: 'oklch(0.85 0.02 250)', pastelText: 'oklch(0.25 0.02 250)' },
+} as const;
 
 // React-grab bridge settings
 export const REACT_GRAB_CONFIG = {

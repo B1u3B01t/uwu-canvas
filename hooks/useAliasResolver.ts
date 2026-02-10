@@ -5,7 +5,7 @@ import { useCanvasStore } from './useCanvasStore';
 
 export interface AliasOption {
   alias: string;
-  type: 'generator' | 'content' | 'component' | 'data2ui';
+  type: 'generator' | 'content' | 'component' | 'data2ui' | 'folder';
   nodeId: string;
   label: string;
 }
@@ -28,6 +28,8 @@ export function useAliasResolver() {
         label = `${data.alias} (Component: ${data.componentKey || 'none'})`;
       } else if (data.type === 'data2ui') {
         label = `${data.alias} (Data2UI: ${data.outputPath || 'none'})`;
+      } else if (data.type === 'folder') {
+        label = `${data.alias} (Folder: ${data.childNodeIds.length} items)`;
       }
       
       return {

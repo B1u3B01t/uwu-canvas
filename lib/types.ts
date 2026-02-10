@@ -44,21 +44,39 @@ export interface Data2UINodeData extends BaseNodeData {
   outputPath: string; // Path to JSON file in /data/ folder (e.g., "audria/recent-memories.json")
 }
 
+// Folder color presets
+export type FolderColor = 'green' | 'blue' | 'red' | 'yellow' | 'purple' | 'pink' | 'orange' | 'gray';
+
+// Folder box specific data
+export interface FolderNodeData extends BaseNodeData {
+  type: 'folder';
+  childNodeIds: string[];    // ordered array of node IDs in this folder
+  isExpanded: boolean;        // controls child visibility on canvas
+  label: string;              // user-facing display name
+  color: FolderColor;         // user-selectable preset color
+}
+
 // Union type for all node data
-export type CanvasNodeData = GeneratorNodeData | ContentNodeData | ComponentNodeData | Data2UINodeData;
+export type CanvasNodeData = GeneratorNodeData | ContentNodeData | ComponentNodeData | Data2UINodeData | FolderNodeData;
 
 // Typed nodes for React Flow
 export type GeneratorNode = Node<GeneratorNodeData, 'generator'>;
 export type ContentNode = Node<ContentNodeData, 'content'>;
 export type ComponentNode = Node<ComponentNodeData, 'component'>;
 export type Data2UINode = Node<Data2UINodeData, 'data2ui'>;
-export type CanvasNode = GeneratorNode | ContentNode | ComponentNode | Data2UINode;
+export type FolderNode = Node<FolderNodeData, 'folder'>;
+export type CanvasNode = GeneratorNode | ContentNode | ComponentNode | Data2UINode | FolderNode;
+
+// Type guard for folder nodes
+export function isFolderNode(node: CanvasNode): node is FolderNode {
+  return node.data.type === 'folder';
+}
 
 // Alias map for resolving references
 export interface AliasMap {
   [alias: string]: {
     nodeId: string;
-    type: 'generator' | 'content' | 'component' | 'data2ui';
+    type: 'generator' | 'content' | 'component' | 'data2ui' | 'folder';
     value: string;
   };
 }
@@ -86,5 +104,6 @@ export interface CanvasState {
     content: number;
     component: number;
     data2ui: number;
+    folder: number;
   };
 }

@@ -140,6 +140,7 @@ export function AutocompleteTextarea({
                       {option.type === 'generator' && '(Generator)'}
                       {option.type === 'content' && '(Content)'}
                       {option.type === 'component' && '(Component)'}
+                      {option.type === 'folder' && '(Folder)'}
                     </span>
                   </CommandItem>
                 ))}

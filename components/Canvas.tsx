@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -18,10 +18,13 @@ import { GeneratorBox } from './nodes/GeneratorBox';
 import { ContentBox } from './nodes/ContentBox';
 import { ComponentBox } from './nodes/ComponentBox';
 import { Data2UIBox } from './nodes/Data2UIBox';
+import { FolderBox } from './nodes/FolderBox';
 import { Toolbar } from './Toolbar';
+import { CanvasContextMenu } from './CanvasContextMenu';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 import { CANVAS_CONFIG } from '../lib/constants';
 import { fileUtils } from '../lib/utils';
+import { isFolderNode } from '../lib/types';
 import type { CanvasNode } from '../lib/types';
 
 // Define node types for React Flow
@@ -30,13 +33,13 @@ const nodeTypes = {
   content: ContentBox,
   component: ComponentBox,
   data2ui: Data2UIBox,
+  folder: FolderBox,
 };
 
 export function Canvas() {
   const storeNodes = useCanvasStore((state) => state.nodes);
   const setStoreNodes = useCanvasStore((state) => state.setNodes);
   const selectNode = useCanvasStore((state) => state.selectNode);
-  const removeNode = useCanvasStore((state) => state.removeNode);
   const markNodeForDeletion = useCanvasStore((state) => state.markNodeForDeletion);
   const addNode = useCanvasStore((state) => state.addNode);
   const addContentNodeWithFile = useCanvasStore((state) => state.addContentNodeWithFile);
@@ -44,24 +47,36 @@ export function Canvas() {
   const lastDeletedNode = useCanvasStore((state) => state.lastDeletedNode);
   const undoDelete = useCanvasStore((state) => state.undoDelete);
 
+  // Derive visible nodes via useMemo — filters out children of collapsed folders
+  // This avoids the infinite re-render loop caused by calling .filter() inside a Zustand selector
+  const visibleNodes = useMemo(() => {
+    const hiddenIds = new Set<string>();
+    storeNodes.forEach((node) => {
+      if (isFolderNode(node) && !node.data.isExpanded) {
+        node.data.childNodeIds.forEach((id) => hiddenIds.add(id));
+      }
+    });
+    return storeNodes.filter((node) => !hiddenIds.has(node.id));
+  }, [storeNodes]);
+
   // Get theme colors based on dark mode
   const themeColors = isDarkMode ? CANVAS_CONFIG.dark : CANVAS_CONFIG.light;
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes as Node[]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(visibleNodes as Node[]);
   const { fitView, screenToFlowPosition } = useReactFlow();
 
   // Get nodes from React Flow internal store for position sync
   const reactFlowNodes = useStore((state) => state.nodes);
 
   // Track node IDs to detect structural changes only
-  const prevNodeIdsRef = useRef<string[]>(storeNodes.map(n => n.id));
+  const prevNodeIdsRef = useRef<string[]>(visibleNodes.map(n => n.id));
 
-  // Only sync when nodes are added or removed (structural changes)
+  // Only sync when visible nodes are added, removed, or visibility changes
   useEffect(() => {
-    const currentIds = storeNodes.map(n => n.id);
+    const currentIds = visibleNodes.map(n => n.id);
     const prevIds = prevNodeIdsRef.current;
 
-    // Check if nodes were added or removed
+    // Check if visible nodes changed (add/remove/expand/collapse)
     const structureChanged =
       currentIds.length !== prevIds.length ||
       !currentIds.every((id, i) => id === prevIds[i]);
@@ -69,7 +84,7 @@ export function Canvas() {
     if (structureChanged) {
       // Only update position and type info for React Flow
       // Data is read directly from Zustand by node components
-      setNodes(storeNodes.map(node => ({
+      setNodes(visibleNodes.map(node => ({
         id: node.id,
         type: node.type,
         position: node.position,
@@ -77,16 +92,17 @@ export function Canvas() {
       })) as Node[]);
       prevNodeIdsRef.current = currentIds;
     }
-  }, [storeNodes, setNodes]);
+  }, [visibleNodes, setNodes]);
 
   // Sync positions from React Flow to Zustand store (triggers auto-save via subscription)
+  // Uses storeNodes (ALL nodes) so hidden children keep their positions
   const syncPositionsToStore = useCallback(() => {
-    const updatedNodes = storeNodes.map((storeNode) => {
-      const rfNode = reactFlowNodes.find((n) => n.id === storeNode.id);
+    const updatedNodes = storeNodes.map((node) => {
+      const rfNode = reactFlowNodes.find((n) => n.id === node.id);
       if (rfNode) {
-        return { ...storeNode, position: rfNode.position };
+        return { ...node, position: rfNode.position };
       }
-      return storeNode;
+      return node;
     }) as CanvasNode[];
     setStoreNodes(updatedNodes);
   }, [storeNodes, reactFlowNodes, setStoreNodes]);
@@ -130,7 +146,7 @@ export function Canvas() {
 
   // Fit view on initial load if there are nodes
   useEffect(() => {
-    if (storeNodes.length > 0) {
+    if (visibleNodes.length > 0) {
       setTimeout(() => fitView({ padding: 0.2 }), 100);
     }
   }, []);
@@ -189,6 +205,7 @@ export function Canvas() {
   );
 
   return (
+    <CanvasContextMenu>
     <div
       className={`h-full w-full relative transition-colors duration-300 ${isDarkMode ? 'uwu-dark' : ''}`}
       style={{ background: themeColors.background }}
@@ -260,5 +277,6 @@ export function Canvas() {
         </div>
       )}
     </div>
+    </CanvasContextMenu>
   );
 }

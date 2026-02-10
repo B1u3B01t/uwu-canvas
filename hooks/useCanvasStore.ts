@@ -2,7 +2,8 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, AliasMap, MessageContentPart } from '../lib/types';
+import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, FolderNodeData, FolderColor, AliasMap, MessageContentPart } from '../lib/types';
+import { isFolderNode } from '../lib/types';
 import { BOX_DEFAULTS, ALIAS_PREFIXES } from '../lib/constants';
 
 const STORAGE_KEY = 'uwu-canvas-storage';
@@ -20,6 +21,7 @@ interface CanvasStore {
     content: number;
     component: number;
     data2ui: number;
+    folder: number;
   };
   isDarkMode: boolean;
 
@@ -31,7 +33,7 @@ interface CanvasStore {
   toggleDarkMode: () => void;
 
   // Node actions
-  addNode: (type: 'generator' | 'content' | 'component' | 'data2ui', position?: { x: number; y: number }) => void;
+  addNode: (type: 'generator' | 'content' | 'component' | 'data2ui' | 'folder', position?: { x: number; y: number }) => string;
   addContentNodeWithFile: (fileData: { fileName: string; fileType: string; fileSize: number; data: string }, position?: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<CanvasNode['data']>) => void;
   removeNode: (nodeId: string) => void;
@@ -42,6 +44,16 @@ interface CanvasStore {
 
   // Selection
   selectNode: (nodeId: string | null) => void;
+
+  // Folder actions
+  addNodeToFolder: (folderId: string, nodeId: string) => void;
+  removeNodeFromFolder: (folderId: string, nodeId: string) => void;
+  reorderFolderChildren: (folderId: string, childNodeIds: string[]) => void;
+  toggleFolderExpanded: (folderId: string) => void;
+  getFolderForNode: (nodeId: string) => string | null;
+  setFolderColor: (folderId: string, color: FolderColor) => void;
+  ungroupFolder: (folderId: string) => void;
+  createFolderWithNode: (nodeId: string, position: { x: number; y: number }) => void;
 
   // Alias resolution
   getAliasMap: () => AliasMap;
@@ -79,7 +91,7 @@ const getInitialDarkMode = () => {
 // Load initial state from localStorage with version migration
 const getInitialState = () => {
   if (typeof window === 'undefined') {
-    return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
+    return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 } };
   }
 
   try {
@@ -88,7 +100,9 @@ const getInitialState = () => {
       const parsed = JSON.parse(stored);
       // Handle versioned and legacy formats
       const nodes = parsed.nodes || [];
-      const counters = parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 };
+      const counters = parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 };
+      // Migrate: ensure folder counter exists
+      if (counters.folder === undefined) counters.folder = 0;
 
       // Migrate legacy format (no version field) to versioned
       if (!parsed.version) {
@@ -101,7 +115,7 @@ const getInitialState = () => {
     // Ignore parse errors
   }
 
-  return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0 } };
+  return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 } };
 };
 
 const initialState = getInitialState();
@@ -221,6 +235,23 @@ export const useCanvasStore = create<CanvasStore>()(
           } as Data2UINodeData,
         };
         break;
+      case 'folder':
+        newNode = {
+          id,
+          type: 'folder',
+          position,
+          data: {
+            type: 'folder',
+            alias: `${ALIAS_PREFIXES.folder}-${newCount}`,
+            childNodeIds: [],
+            isExpanded: true,
+            label: `Folder ${newCount}`,
+            color: 'green',
+            width: BOX_DEFAULTS.folder.width,
+            height: BOX_DEFAULTS.folder.height,
+          } as FolderNodeData,
+        };
+        break;
     }
 
     set({
@@ -228,6 +259,8 @@ export const useCanvasStore = create<CanvasStore>()(
       counters: { ...counters, [type]: newCount },
       selectedNodeId: id,
     });
+
+    return id;
   },
 
   addContentNodeWithFile: (fileData, position = { x: 100, y: 100 }) => {
@@ -286,8 +319,24 @@ export const useCanvasStore = create<CanvasStore>()(
       }, UNDO_TIMEOUT);
     }
 
+    // Clean up folder relationships
+    let updatedNodes = get().nodes;
+    if (nodeToDelete) {
+      updatedNodes = updatedNodes.map((node) => {
+        if (!isFolderNode(node)) return node;
+        // If deleting a non-folder node, remove it from any folder's childNodeIds
+        if (node.data.childNodeIds.includes(nodeId)) {
+          return {
+            ...node,
+            data: { ...node.data, childNodeIds: node.data.childNodeIds.filter((id) => id !== nodeId) },
+          };
+        }
+        return node;
+      }) as CanvasNode[];
+    }
+
     set({
-      nodes: get().nodes.filter((node) => node.id !== nodeId),
+      nodes: updatedNodes.filter((node) => node.id !== nodeId),
       deletingNodeIds: new Set([...get().deletingNodeIds].filter(id => id !== nodeId)),
       selectedNodeId: get().selectedNodeId === nodeId ? null : get().selectedNodeId,
     });
@@ -336,6 +385,95 @@ export const useCanvasStore = create<CanvasStore>()(
     set({ selectedNodeId: nodeId });
   },
 
+  // Folder actions
+  addNodeToFolder: (folderId, nodeId) => {
+    const { nodes } = get();
+    if (folderId === nodeId) return;
+    const targetNode = nodes.find((n) => n.id === nodeId);
+    if (!targetNode || isFolderNode(targetNode)) return;
+    // Only content nodes can be added to folders
+    if (targetNode.data.type !== 'content') return;
+    const alreadyInFolder = nodes.some(
+      (n) => isFolderNode(n) && n.data.childNodeIds.includes(nodeId)
+    );
+    if (alreadyInFolder) return;
+
+    set({
+      nodes: nodes.map((node) =>
+        node.id === folderId && isFolderNode(node)
+          ? { ...node, data: { ...node.data, childNodeIds: [...node.data.childNodeIds, nodeId] } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  removeNodeFromFolder: (folderId, nodeId) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === folderId && isFolderNode(node)
+          ? { ...node, data: { ...node.data, childNodeIds: node.data.childNodeIds.filter((id) => id !== nodeId) } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  reorderFolderChildren: (folderId, childNodeIds) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === folderId && isFolderNode(node)
+          ? { ...node, data: { ...node.data, childNodeIds } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  toggleFolderExpanded: (folderId) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === folderId && isFolderNode(node)
+          ? { ...node, data: { ...node.data, isExpanded: !node.data.isExpanded } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  getFolderForNode: (nodeId) => {
+    const { nodes } = get();
+    const folder = nodes.find(
+      (n) => isFolderNode(n) && n.data.childNodeIds.includes(nodeId)
+    );
+    return folder?.id ?? null;
+  },
+
+  setFolderColor: (folderId, color) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === folderId && isFolderNode(node)
+          ? { ...node, data: { ...node.data, color } }
+          : node
+      ) as CanvasNode[],
+    });
+  },
+
+  ungroupFolder: (folderId) => {
+    set({
+      nodes: get().nodes
+        .map((node) =>
+          node.id === folderId && isFolderNode(node)
+            ? { ...node, data: { ...node.data, childNodeIds: [] } }
+            : node
+        )
+        .filter((node) => node.id !== folderId) as CanvasNode[],
+    });
+  },
+
+  createFolderWithNode: (nodeId, position) => {
+    const targetNode = get().nodes.find((n) => n.id === nodeId);
+    if (!targetNode || targetNode.data.type !== 'content') return;
+    const folderId = get().addNode('folder', position);
+    get().addNodeToFolder(folderId, nodeId);
+  },
+
   getAliasMap: () => {
     const { nodes } = get();
     const map: AliasMap = {};
@@ -353,6 +491,8 @@ export const useCanvasStore = create<CanvasStore>()(
         value = `[Component: ${data.componentKey}]`;
       } else if (data.type === 'data2ui') {
         value = `[Data2UI: ${data.outputPath}]`;
+      } else if (data.type === 'folder') {
+        value = `[Folder: ${data.label} (${data.childNodeIds.length} items)]`;
       }
 
       map[data.alias] = {
@@ -386,6 +526,48 @@ export const useCanvasStore = create<CanvasStore>()(
     const { nodes } = get();
     const parts: MessageContentPart[] = [];
 
+    // Helper: resolve a single node's content into message parts
+    const resolveNodeContent = (node: CanvasNode): MessageContentPart[] => {
+      const data = node.data;
+      const resolved: MessageContentPart[] = [];
+
+      if (data.type === 'content') {
+        if (data.fileData) {
+          const { fileType, data: base64Data, fileName } = data.fileData;
+          if (fileType.startsWith('image/')) {
+            resolved.push({ type: 'image', image: base64Data, mimeType: fileType });
+          } else if (fileType === 'application/pdf') {
+            resolved.push({ type: 'file', data: base64Data, mimeType: fileType });
+          } else if (fileType.startsWith('text/') || fileType === 'application/json') {
+            try {
+              const textContent = atob(base64Data);
+              resolved.push({ type: 'text', text: `[File: ${fileName}]\n${textContent}` });
+            } catch {
+              resolved.push({ type: 'text', text: `[File: ${fileName} - unable to decode]` });
+            }
+          } else if (
+            fileType.startsWith('audio/') ||
+            fileType.includes('excel') ||
+            fileType.includes('spreadsheet') ||
+            fileType.includes('word') ||
+            fileType.includes('document')
+          ) {
+            resolved.push({ type: 'file', data: base64Data, mimeType: fileType });
+          } else {
+            resolved.push({ type: 'text', text: `[Attached file: ${fileName} (${fileType})]` });
+          }
+        } else {
+          resolved.push({ type: 'text', text: data.content || '' });
+        }
+      } else if (data.type === 'generator') {
+        resolved.push({ type: 'text', text: data.output || '' });
+      } else {
+        resolved.push({ type: 'text', text: `@${data.alias}` });
+      }
+
+      return resolved;
+    };
+
     // Find all @alias references and their positions
     const aliasRegex = /@([\w-]+)/g;
     let lastIndex = 0;
@@ -407,80 +589,18 @@ export const useCanvasStore = create<CanvasStore>()(
       const referencedNode = nodes.find((n) => n.data.alias === alias);
 
       if (referencedNode) {
-        const data = referencedNode.data;
-
-        if (data.type === 'content') {
-          if (data.fileData) {
-            const { fileType, data: base64Data, fileName } = data.fileData;
-
-            // Handle different file types according to AI SDK capabilities
-            if (fileType.startsWith('image/')) {
-              // Images: use image part
-              parts.push({
-                type: 'image',
-                image: base64Data,
-                mimeType: fileType,
-              });
-            } else if (fileType === 'application/pdf') {
-              // PDFs: use file part
-              parts.push({
-                type: 'file',
-                data: base64Data,
-                mimeType: fileType,
-              });
-            } else if (fileType.startsWith('text/') || fileType === 'application/json') {
-              // Text files: decode and include as text
-              try {
-                const textContent = atob(base64Data);
-                parts.push({
-                  type: 'text',
-                  text: `[File: ${fileName}]\n${textContent}`,
-                });
-              } catch {
-                parts.push({
-                  type: 'text',
-                  text: `[File: ${fileName} - unable to decode]`,
-                });
-              }
-            } else if (
-              fileType.startsWith('audio/') ||
-              fileType.includes('excel') ||
-              fileType.includes('spreadsheet') ||
-              fileType.includes('word') ||
-              fileType.includes('document')
-            ) {
-              // Audio and document files: use file part
-              parts.push({
-                type: 'file',
-                data: base64Data,
-                mimeType: fileType,
-              });
-            } else {
-              // Unsupported file types: add as text placeholder
-              parts.push({
-                type: 'text',
-                text: `[Attached file: ${fileName} (${fileType})]`,
-              });
+        if (isFolderNode(referencedNode)) {
+          // Folder: expand all child contents
+          parts.push({ type: 'text', text: `[Folder: ${referencedNode.data.label}]\n` });
+          for (const childId of referencedNode.data.childNodeIds) {
+            const childNode = nodes.find((n) => n.id === childId);
+            if (childNode) {
+              parts.push(...resolveNodeContent(childNode));
             }
-          } else {
-            // Text content box
-            parts.push({
-              type: 'text',
-              text: data.content || '',
-            });
           }
-        } else if (data.type === 'generator') {
-          // Generator output
-          parts.push({
-            type: 'text',
-            text: data.output || '',
-          });
+          parts.push({ type: 'text', text: `[End Folder: ${referencedNode.data.label}]\n` });
         } else {
-          // Other node types - just include as text placeholder
-          parts.push({
-            type: 'text',
-            text: `@${alias}`,
-          });
+          parts.push(...resolveNodeContent(referencedNode));
         }
       } else {
         // Alias not found - keep as is
@@ -565,7 +685,7 @@ export const useCanvasStore = create<CanvasStore>()(
       const parsed = JSON.parse(stored);
       set({
         nodes: parsed.nodes || [],
-        counters: parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0 },
+        counters: { ...{ generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 }, ...(parsed.counters || {}) },
       });
       }
     } catch {
@@ -577,7 +697,7 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: [],
       selectedNodeId: null,
-      counters: { generator: 0, content: 0, component: 0, data2ui: 0 },
+      counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 },
     });
   },
 })));
