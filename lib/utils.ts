@@ -76,3 +76,32 @@ export const fileUtils = {
     return supportedTypes.some(type => mimeType.startsWith(type));
   }
 };
+
+/** Allowed schemes for iframe embeds (security) */
+const ALLOWED_IFRAME_SCHEMES = ['https:', 'http:'] as const;
+
+/** Hostnames considered localhost (http allowed for dev) */
+const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Parse clipboard text as a URL and validate for iframe embedding.
+ * Allows: https for any host; http/https for localhost/127.0.0.1.
+ * Returns normalized URL string or null if invalid/unsafe.
+ */
+export function parseAndValidateIframeUrl(input: string): string | null {
+  const raw = input.trim().split(/\s/)[0]?.trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    const scheme = url.protocol;
+    const hostname = url.hostname.toLowerCase();
+
+    if (!ALLOWED_IFRAME_SCHEMES.includes(scheme as 'https:' | 'http:')) return null;
+    if (scheme === 'http:' && !LOCALHOST_HOSTS.has(hostname)) return null;
+
+    return url.href;
+  } catch {
+    return null;
+  }
+}

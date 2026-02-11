@@ -141,8 +141,8 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
 
         {/* Content overlay */}
         <div className={`relative z-10 h-full flex flex-col ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
-          {/* Header */}
-          <div className="flex items-center gap-2 px-6 pt-5 pb-2">
+          {/* Header - drag handle; interactive children have nodrag */}
+          <div className="uwu-drag-handle flex items-center gap-2 px-6 pt-5 pb-2 cursor-grab active:cursor-grabbing">
             <FolderIcon tabColor={colors.tab} bodyColor={colors.body} size={18} />
 
             {isEditingAlias ? (
@@ -151,19 +151,19 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                 onChange={(e) => setEditingAlias(e.target.value)}
                 onBlur={() => commitAlias()}
                 onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-                className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
+                className="nodrag h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
                 autoFocus
               />
             ) : (
               <div
-                className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
+                className="nodrag inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
               >
                 {data.alias}
               </div>
             )}
 
-            <div className="ml-auto flex items-center gap-0.5">
+            <div className="nodrag ml-auto flex items-center gap-0.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button

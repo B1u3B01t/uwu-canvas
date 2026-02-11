@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   ReactFlow,
   Background,
@@ -18,14 +19,19 @@ import { Undo2, Sparkles, AlertTriangle } from 'lucide-react';
 import { GeneratorBox } from './nodes/GeneratorBox';
 import { ContentBox } from './nodes/ContentBox';
 import { ComponentBox } from './nodes/ComponentBox';
-import { Data2UIBox } from './nodes/Data2UIBox';
 import { FolderBox } from './nodes/FolderBox';
+import { IframeBox } from './nodes/IframeBox';
+
+const Data2UIBox = dynamic(
+  () => import('./nodes/Data2UIBox').then((m) => ({ default: m.Data2UIBox })),
+  { ssr: false }
+);
 import { Toolbar } from './Toolbar';
 import { PulseEffect } from './PulseEffect';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 import { CANVAS_CONFIG } from '../lib/constants';
-import { fileUtils } from '../lib/utils';
+import { fileUtils, parseAndValidateIframeUrl } from '../lib/utils';
 import { isFolderNode } from '../lib/types';
 import type { CanvasNode } from '../lib/types';
 
@@ -35,6 +41,7 @@ const nodeTypes = {
   content: ContentBox,
   component: ComponentBox,
   data2ui: Data2UIBox,
+  iframe: IframeBox,
   folder: FolderBox,
 };
 
@@ -43,8 +50,8 @@ export function Canvas() {
   const setStoreNodes = useCanvasStore((state) => state.setNodes);
   const selectNode = useCanvasStore((state) => state.selectNode);
   const markNodeForDeletion = useCanvasStore((state) => state.markNodeForDeletion);
-  const addNode = useCanvasStore((state) => state.addNode);
   const addContentNodeWithFile = useCanvasStore((state) => state.addContentNodeWithFile);
+  const addIframeNode = useCanvasStore((state) => state.addIframeNode);
   const isDarkMode = useCanvasStore((state) => state.isDarkMode);
   const lastDeletedNode = useCanvasStore((state) => state.lastDeletedNode);
   const undoDelete = useCanvasStore((state) => state.undoDelete);
@@ -96,7 +103,15 @@ export function Canvas() {
   // Get theme colors based on dark mode
   const themeColors = isDarkMode ? CANVAS_CONFIG.dark : CANVAS_CONFIG.light;
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(visibleNodes as Node[]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    visibleNodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: node.data,
+      dragHandle: '.uwu-drag-handle',
+    })) as Node[]
+  );
   const { fitView, screenToFlowPosition } = useReactFlow();
 
   // Get nodes from React Flow internal store for position sync
@@ -123,6 +138,7 @@ export function Canvas() {
         type: node.type,
         position: node.position,
         data: node.data, // React Flow needs this but components read from store
+        dragHandle: '.uwu-drag-handle',
       })) as Node[]);
       prevNodeIdsRef.current = currentIds;
     }
@@ -184,6 +200,36 @@ export function Canvas() {
       setTimeout(() => fitView({ padding: 0.2 }), 100);
     }
   }, []);
+
+  // Paste URL → create iframe node (https or localhost only)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+
+      const text = e.clipboardData?.getData('text/plain');
+      const url = text ? parseAndValidateIframeUrl(text) : null;
+      if (!url) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const pane = document.querySelector('.react-flow');
+      if (pane) {
+        const rect = pane.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const position = screenToFlowPosition({ x: centerX, y: centerY });
+        addIframeNode(url, position);
+      } else {
+        addIframeNode(url);
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [screenToFlowPosition, addIframeNode]);
 
   // Handle file drag and drop
   const onDragOver = useCallback((event: React.DragEvent) => {

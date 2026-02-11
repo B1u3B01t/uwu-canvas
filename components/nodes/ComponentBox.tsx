@@ -132,20 +132,20 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           </>
         )}
 
-        {/* Header */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-2 nodrag">
+        {/* Header - drag handle; interactive children have nodrag */}
+        <div className="uwu-drag-handle flex items-center gap-2 px-6 pt-5 pb-2 cursor-grab active:cursor-grabbing">
           {isEditingAlias ? (
             <Input
               value={editingAlias}
               onChange={(e) => setEditingAlias(e.target.value)}
               onBlur={() => commitAlias()}
               onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
+              className="nodrag h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
               autoFocus
             />
           ) : (
             <div
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
+              className="nodrag inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Layout className="w-3 h-3" />
@@ -158,7 +158,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
             value={data.componentKey}
             onValueChange={(value) => updateNode(id, { componentKey: value })}
           >
-            <SelectTrigger className="h-6 w-[100px] border-none bg-[#D9D0BE]/50 px-1.5 text-[10px] hover:bg-[#D9D0BE]/80 transition-colors rounded-lg">
+            <SelectTrigger className="nodrag h-6 w-[100px] border-none bg-[#D9D0BE]/50 px-1.5 text-[10px] hover:bg-[#D9D0BE]/80 transition-colors rounded-lg">
               <SelectValue placeholder="Component..." />
             </SelectTrigger>
             <SelectContent>
@@ -180,7 +180,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           </Select>
 
           {/* View Mode Toggle - Pill-shaped segmented control */}
-          <div className="flex rounded-full bg-[#D9D0BE]/60 p-0.5">
+          <div className="nodrag flex rounded-full bg-[#D9D0BE]/60 p-0.5">
             <button
               onClick={() => handleViewModeChange('mobile')}
               className={`
@@ -214,7 +214,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           {/* Toast notification when prompt is copied */}
           {copiedToast && (
             <div
-              className="
+              className="nodrag
                 h-5 px-2 rounded-full
                 bg-emerald-500 text-white
                 text-[10px] font-medium
@@ -228,8 +228,8 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           )}
         </div>
 
-        {/* Content */}
-        <div className={`flex-1 px-6 pb-6 overflow-hidden ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
+        {/* Content - only interactive when node selected; otherwise events pass through to canvas */}
+        <div className={`flex-1 px-6 pb-6 overflow-hidden ${isInteractive ? 'nodrag nowheel nopan' : 'pointer-events-none'}`}>
           <div className="h-full overflow-hidden rounded-2xl border border-[#DDD6C7]/50 bg-white">
             {data.componentKey && selectedComponent ? (
               <iframe

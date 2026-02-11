@@ -132,11 +132,14 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
       .then((response) => {
         if (response.files) {
           setJsonFiles(response.files);
+        } else {
+          setJsonFiles([]);
         }
         setIsLoadingFiles(false);
       })
       .catch((error) => {
         console.error('Failed to load JSON files:', error);
+        setJsonFiles([]);
         setIsLoadingFiles(false);
       });
   }, []);
@@ -248,8 +251,13 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
     // Check if generation just finished (transition from true to false)
     if (prevIsRunning === true && currentIsRunning === false) {
       // Generation just completed - auto-apply if there's output
-      const sourceValue = sourceGeneratorData.output;
-      if (sourceValue && sourceValue.trim() !== '') {
+      const sourceOutput = sourceGeneratorData.output;
+      const hasOutput = sourceOutput && (
+        (sourceOutput.mode === 'text' && sourceOutput.text.trim() !== '') ||
+        sourceOutput.mode === 'image' ||
+        sourceOutput.mode === 'component'
+      );
+      if (hasOutput) {
         // Small delay to ensure output is fully set
         setTimeout(() => {
           handleApply();
@@ -315,20 +323,20 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
             </svg>
           </>
         )}
-        {/* Header */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-2">
+        {/* Header - drag handle; alias/input have nodrag */}
+        <div className="uwu-drag-handle flex items-center gap-2 px-6 pt-5 pb-2 cursor-grab active:cursor-grabbing">
           {isEditingAlias ? (
             <Input
               value={editingAlias}
               onChange={(e) => setEditingAlias(e.target.value)}
               onBlur={() => commitAlias()}
               onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
+              className="nodrag h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
               autoFocus
             />
           ) : (
             <div
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
+              className="nodrag inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Database className="w-3 h-3" />
@@ -380,7 +388,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
                     </SelectItem>
                   ) : jsonFiles.length === 0 ? (
                     <SelectItem value="_empty" disabled>
-                      No JSON files found
+                      No data yet
                     </SelectItem>
                   ) : (
                     jsonFiles.map((file) => (

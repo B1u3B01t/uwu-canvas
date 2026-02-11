@@ -1,5 +1,6 @@
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
+import { existsSync } from 'fs';
 import { NextResponse } from 'next/server';
 
 async function findJsonFiles(dir: string, baseDir: string, fileList: string[] = []): Promise<string[]> {
@@ -24,8 +25,11 @@ async function findJsonFiles(dir: string, baseDir: string, fileList: string[] = 
 export async function GET() {
   try {
     const dataDir = join(process.cwd(), 'app', 'data');
+    if (!existsSync(dataDir)) {
+      return NextResponse.json({ files: [] });
+    }
     const jsonFiles = await findJsonFiles(dataDir, dataDir);
-    
+
     // Sort files alphabetically
     jsonFiles.sort();
 

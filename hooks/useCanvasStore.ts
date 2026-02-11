@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, FolderNodeData, FolderColor, AliasMap, MessageContentPart, Pulse } from '../lib/types';
+import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, IframeNodeData, FolderNodeData, FolderColor, AliasMap, MessageContentPart, Pulse, GeneratorOutput } from '../lib/types';
 import { isFolderNode } from '../lib/types';
 import { BOX_DEFAULTS, ALIAS_PREFIXES } from '../lib/constants';
 
@@ -21,6 +21,7 @@ interface CanvasStore {
     content: number;
     component: number;
     data2ui: number;
+    iframe: number;
     folder: number;
   };
   isDarkMode: boolean;
@@ -43,6 +44,7 @@ interface CanvasStore {
   // Node actions
   addNode: (type: 'generator' | 'content' | 'component' | 'data2ui' | 'folder', position?: { x: number; y: number }) => string;
   addContentNodeWithFile: (fileData: { fileName: string; fileType: string; fileSize: number; data: string }, position?: { x: number; y: number }) => void;
+  addIframeNode: (url: string, position?: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<CanvasNode['data']>) => void;
   removeNode: (nodeId: string) => void;
   markNodeForDeletion: (nodeId: string) => void;
@@ -75,7 +77,7 @@ interface CanvasStore {
   removePulse: (pulseId: string) => void;
 
   // Generator specific
-  setGeneratorOutput: (nodeId: string, output: string) => void;
+  setGeneratorOutput: (nodeId: string, output: GeneratorOutput | null) => void;
   setGeneratorRunning: (nodeId: string, isRunning: boolean) => void;
   setGeneratorError: (nodeId: string, error: string) => void;
   clearGeneratorError: (nodeId: string) => void;
@@ -103,7 +105,7 @@ const getInitialDarkMode = () => {
 // Load initial state from localStorage with version migration
 const getInitialState = () => {
   if (typeof window === 'undefined') {
-    return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 } };
+    return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, iframe: 0, folder: 0 } };
   }
 
   try {
@@ -112,22 +114,68 @@ const getInitialState = () => {
       const parsed = JSON.parse(stored);
       // Handle versioned and legacy formats
       const nodes = parsed.nodes || [];
-      const counters = parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 };
-      // Migrate: ensure folder counter exists
+      const counters = parsed.counters || { generator: 0, content: 0, component: 0, data2ui: 0, iframe: 0, folder: 0 };
+      // Migrate: ensure folder and iframe counters exist
       if (counters.folder === undefined) counters.folder = 0;
+      if (counters.iframe === undefined) counters.iframe = 0;
 
       // Migrate legacy format (no version field) to versioned
       if (!parsed.version) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, nodes, counters }));
       }
 
-      return { nodes, counters };
+      // Migrate legacy string output to structured GeneratorOutput
+      const migratedNodes = nodes.map((node: CanvasNode) => {
+        if (node.data.type === 'generator' && typeof node.data.output === 'string') {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              output: node.data.output
+                ? { mode: 'text' as const, text: node.data.output }
+                : null,
+            },
+          };
+        }
+        // Strip base64 image data from persisted image outputs (too large for localStorage)
+        if (
+          node.data.type === 'generator' &&
+          node.data.output &&
+          typeof node.data.output === 'object' &&
+          'mode' in node.data.output &&
+          node.data.output.mode === 'image'
+        ) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              output: null, // Clear image outputs on reload; user can regenerate
+            },
+          };
+        }
+        // Migrate iframe nodes: add viewMode and mobile/laptop dimensions if missing
+        if (node.data.type === 'iframe' && !('viewMode' in node.data)) {
+          const d = node.data as IframeNodeData;
+          return {
+            ...node,
+            data: {
+              ...d,
+              viewMode: 'mobile' as const,
+              width: BOX_DEFAULTS.iframe.mobile.width,
+              height: BOX_DEFAULTS.iframe.mobile.height,
+            } as IframeNodeData,
+          };
+        }
+        return node;
+      });
+
+      return { nodes: migratedNodes, counters };
     }
   } catch {
     // Ignore parse errors
   }
 
-  return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 } };
+  return { nodes: [], counters: { generator: 0, content: 0, component: 0, data2ui: 0, iframe: 0, folder: 0 } };
 };
 
 const initialState = getInitialState();
@@ -217,7 +265,7 @@ export const useCanvasStore = create<CanvasStore>()(
             type: 'generator',
             alias: `${ALIAS_PREFIXES.generator}-${newCount}`,
             input: '',
-            output: '',
+            output: null,
             isRunning: false,
             provider: undefined,
             model: undefined,
@@ -323,6 +371,36 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: [...nodes, newNode],
       counters: { ...counters, content: newCount },
+      selectedNodeId: id,
+    });
+  },
+
+  addIframeNode: (url, position = { x: 100, y: 100 }) => {
+    const { counters, nodes } = get();
+    const existingAliases = new Set(nodes.map((n) => n.data.alias));
+    let newCount = counters.iframe + 1;
+    while (existingAliases.has(`${ALIAS_PREFIXES.iframe}-${newCount}`)) {
+      newCount++;
+    }
+    const id = generateId();
+
+    const newNode: CanvasNode = {
+      id,
+      type: 'iframe',
+      position,
+      data: {
+        type: 'iframe',
+        alias: `${ALIAS_PREFIXES.iframe}-${newCount}`,
+        url,
+        viewMode: 'mobile',
+        width: BOX_DEFAULTS.iframe.mobile.width,
+        height: BOX_DEFAULTS.iframe.mobile.height,
+      } as IframeNodeData,
+    };
+
+    set({
+      nodes: [...nodes, newNode],
+      counters: { ...counters, iframe: newCount },
       selectedNodeId: id,
     });
   },
@@ -522,7 +600,15 @@ export const useCanvasStore = create<CanvasStore>()(
       let value = '';
 
       if (data.type === 'generator') {
-        value = data.output;
+        if (data.output?.mode === 'text') {
+          value = data.output.text;
+        } else if (data.output?.mode === 'image') {
+          value = `[Generated Image: ${data.output.prompt}]`;
+        } else if (data.output?.mode === 'component') {
+          value = data.output.code;
+        } else {
+          value = '';
+        }
       } else if (data.type === 'content') {
         // For content nodes with files, use filename; otherwise use text content
         value = data.fileData ? `[File: ${data.fileData.fileName}]` : (data.content || '');
@@ -530,6 +616,8 @@ export const useCanvasStore = create<CanvasStore>()(
         value = `[Component: ${data.componentKey}]`;
       } else if (data.type === 'data2ui') {
         value = `[Data2UI: ${data.outputPath}]`;
+      } else if (data.type === 'iframe') {
+        value = `[Iframe: ${data.url}]`;
       } else if (data.type === 'folder') {
         value = `[Folder: ${data.label} (${data.childNodeIds.length} items)]`;
       }
@@ -599,7 +687,11 @@ export const useCanvasStore = create<CanvasStore>()(
           resolved.push({ type: 'text', text: data.content || '' });
         }
       } else if (data.type === 'generator') {
-        resolved.push({ type: 'text', text: data.output || '' });
+        let outputText = '';
+        if (data.output?.mode === 'text') outputText = data.output.text;
+        else if (data.output?.mode === 'image') outputText = `[Generated Image: ${data.output.prompt}]`;
+        else if (data.output?.mode === 'component') outputText = data.output.code;
+        resolved.push({ type: 'text', text: outputText });
       } else {
         resolved.push({ type: 'text', text: `@${data.alias}` });
       }
@@ -714,7 +806,7 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: get().nodes.map((node) =>
         node.id === nodeId && node.data.type === 'generator'
-          ? { ...node, data: { ...node.data, error, output: '' } }
+          ? { ...node, data: { ...node.data, error, output: null } }
           : node
       ) as CanvasNode[],
     });
@@ -758,7 +850,7 @@ export const useCanvasStore = create<CanvasStore>()(
     set({
       nodes: [],
       selectedNodeId: null,
-      counters: { generator: 0, content: 0, component: 0, data2ui: 0, folder: 0 },
+      counters: { generator: 0, content: 0, component: 0, data2ui: 0, iframe: 0, folder: 0 },
     });
   },
 })));

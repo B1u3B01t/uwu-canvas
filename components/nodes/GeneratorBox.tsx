@@ -2,8 +2,10 @@
 
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { NodeProps, NodeResizer } from '@xyflow/react';
-import { Play, Square, Sparkles, Copy, Check, AlertCircle, RotateCcw, Code, Eye } from 'lucide-react';
+import { Play, Square, Sparkles, Copy, Check, AlertCircle, RotateCcw, Code, Eye, Image as ImageIcon, Code2, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { ImageOutputRenderer } from '../renderers/ImageOutputRenderer';
+import { ComponentOutputRenderer } from '../renderers/ComponentOutputRenderer';
 import { Input } from '../ui/input';
 import {
   Select,
@@ -18,14 +20,27 @@ import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { Toggle } from '../ui/toggle';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { FONT_SIZES } from '../../lib/constants';
-import type { GeneratorNodeData, AIProvider } from '../../lib/types';
+import type { GeneratorNodeData, AIProvider, ModelCapability, OutputMode } from '../../lib/types';
 
 interface ProviderData {
   name: string;
-  models: { id: string; name: string }[];
+  models: { id: string; name: string; capabilities?: ModelCapability[] }[];
 }
 
 type ProvidersMap = Record<string, ProviderData>;
+
+// Derive the output mode from the selected model's capabilities
+function getOutputMode(
+  providersData: ProvidersMap,
+  provider?: string,
+  modelId?: string
+): OutputMode {
+  if (!provider || !modelId || !providersData[provider]) return 'text';
+  const model = providersData[provider].models.find(m => m.id === modelId);
+  if (!model?.capabilities) return 'text';
+  if (model.capabilities.includes('image')) return 'image';
+  return 'text';
+}
 
 // Cache for available providers (shared across all generator boxes)
 let cachedProviders: ProvidersMap | null = null;
@@ -125,62 +140,87 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
       });
   }, [data, id, updateNode]);
 
+  const outputMode = getOutputMode(providersData, currentProvider, currentModel);
+
   const handleRun = useCallback(async () => {
     if (!data || data.isRunning) return;
 
     clearGeneratorError(id);
     setGeneratorRunning(id, true);
-    setGeneratorOutput(id, '');
+    setGeneratorOutput(id, null);
 
     try {
-      // Build structured message content with file/image parts
-      const contentParts = buildMessageContent(data.input);
+      if (outputMode === 'image') {
+        // Non-streaming image generation
+        const response = await fetch('/uwu-canvas/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: data.input,
+            provider: currentProvider,
+            model: currentModel,
+          }),
+        });
 
-      // Check if we have any file/image parts
-      const hasMediaParts = contentParts.some(
-        (part) => part.type === 'image' || part.type === 'file'
-      );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Image generation failed');
+        }
 
-      const response = await fetch('/uwu-canvas/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          hasMediaParts
-            ? {
-                // Use structured messages format for files/images
-                messages: [
-                  {
-                    role: 'user',
-                    content: contentParts,
-                  },
-                ],
-                provider: currentProvider,
-                model: currentModel,
-              }
-            : {
-                // Use simple prompt format for text-only
-                prompt: contentParts.map((p) => (p.type === 'text' ? p.text : '')).join(''),
-                provider: currentProvider,
-                model: currentModel,
-              }
-        ),
-      });
+        const result = await response.json();
+        if (result.images?.length > 0) {
+          setGeneratorOutput(id, {
+            mode: 'image',
+            images: result.images,
+            prompt: data.input,
+          });
+        } else if (result.textFallback) {
+          // Gemini image model returned text instead of an image
+          setGeneratorOutput(id, { mode: 'text', text: result.textFallback });
+        } else {
+          throw new Error('No image was generated');
+        }
+      } else {
+        // Streaming text generation (existing logic)
+        const contentParts = buildMessageContent(data.input);
+        const hasMediaParts = contentParts.some(
+          (part) => part.type === 'image' || part.type === 'file'
+        );
 
-      if (!response.ok) throw new Error('Generation failed');
+        const response = await fetch('/uwu-canvas/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            hasMediaParts
+              ? {
+                  messages: [{ role: 'user', content: contentParts }],
+                  provider: currentProvider,
+                  model: currentModel,
+                }
+              : {
+                  prompt: contentParts.map((p) => (p.type === 'text' ? p.text : '')).join(''),
+                  provider: currentProvider,
+                  model: currentModel,
+                }
+          ),
+        });
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+        if (!response.ok) throw new Error('Generation failed');
 
-      const decoder = new TextDecoder();
-      let output = '';
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader available');
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        const decoder = new TextDecoder();
+        let output = '';
 
-        const chunk = decoder.decode(value, { stream: true });
-        output += chunk;
-        setGeneratorOutput(id, output);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          output += chunk;
+          setGeneratorOutput(id, { mode: 'text', text: output });
+        }
       }
     } catch (error) {
       console.error('Generation error:', error);
@@ -188,7 +228,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
     } finally {
       setGeneratorRunning(id, false);
     }
-  }, [id, data, currentProvider, currentModel, buildMessageContent, setGeneratorOutput, setGeneratorRunning, setGeneratorError, clearGeneratorError]);
+  }, [id, data, currentProvider, currentModel, outputMode, buildMessageContent, setGeneratorOutput, setGeneratorRunning, setGeneratorError, clearGeneratorError]);
 
   const handleStop = useCallback(() => {
     setGeneratorRunning(id, false);
@@ -196,7 +236,11 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
 
   const handleCopy = useCallback(() => {
     if (!data?.output) return;
-    navigator.clipboard.writeText(data.output);
+    let copyText = '';
+    if (data.output.mode === 'text') copyText = data.output.text;
+    else if (data.output.mode === 'component') copyText = data.output.code;
+    else if (data.output.mode === 'image') copyText = data.output.prompt;
+    navigator.clipboard.writeText(copyText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [data?.output]);
@@ -311,8 +355,8 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
               : 'border-[2px] border-[#2D2A26] shadow-[0_7px_0_0_#2D2A26]'}
           `}
         >
-          {/* Dark Header */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#3F3C39] nodrag">
+          {/* Dark Header - drag handle; Run/Stop button has nodrag */}
+          <div className="uwu-drag-handle flex items-center justify-between px-4 py-2.5 bg-[#3F3C39] cursor-grab active:cursor-grabbing">
             <div className="flex items-center gap-2.5">
               {/* Squircle Icon */}
               <div className="w-6 h-6 rounded-[6px] bg-zinc-800 flex items-center justify-center border border-zinc-600">
@@ -328,7 +372,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
               onClick={data.isRunning ? handleStop : handleRun}
               disabled={!hasProviders || isLoadingProviders}
               className={`
-                h-8 px-4 rounded-full
+                nodrag h-8 px-4 rounded-full
                 flex items-center justify-center gap-2
                 transition-all duration-200
                 active:scale-95
@@ -418,7 +462,17 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                               value={`${pKey}:${m.id}`}
                               className="text-[13px] py-2.5 pl-4 rounded-lg focus:bg-zinc-50"
                             >
-                              {m.name}
+                              <span className="inline-flex items-center gap-2 w-full">
+                                <span className="flex-1">{m.name}</span>
+                                <span className="inline-flex items-center gap-0.5 flex-shrink-0">
+                                  {m.capabilities?.includes('image') && (
+                                    <ImageIcon className="h-3 w-3 text-zinc-400" />
+                                  )}
+                                  {m.capabilities?.includes('component') && (
+                                    <Code2 className="h-3 w-3 text-zinc-400" />
+                                  )}
+                                </span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -489,43 +543,60 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                 </div>
                 {data.output && !data.isRunning && (
                   <div className="flex items-center gap-0.5">
-                    <Toggle
-                      pressed={showRaw}
-                      onPressedChange={setShowRaw}
-                      size="sm"
-                      aria-label={showRaw ? 'Show formatted' : 'Show raw markdown'}
-                    >
-                      {showRaw ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <Code className="h-3.5 w-3.5" />
-                      )}
-                    </Toggle>
-                    <button
-                      onClick={handleCopy}
-                      className="h-6 w-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-[#D9D0BE] transition-all duration-150"
-                    >
-                      {copied ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
+                    {/* Text mode: markdown/raw toggle */}
+                    {data.output.mode === 'text' && (
+                      <Toggle
+                        pressed={showRaw}
+                        onPressedChange={setShowRaw}
+                        size="sm"
+                        aria-label={showRaw ? 'Show formatted' : 'Show raw markdown'}
+                      >
+                        {showRaw ? (
+                          <Eye className="h-3.5 w-3.5" />
+                        ) : (
+                          <Code className="h-3.5 w-3.5" />
+                        )}
+                      </Toggle>
+                    )}
+                    {/* Copy button (text and component modes) */}
+                    {data.output.mode !== 'image' && (
+                      <button
+                        onClick={handleCopy}
+                        className="h-6 w-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-[#D9D0BE] transition-all duration-150"
+                      >
+                        {copied ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Output content */}
               {data.output ? (
-                showRaw ? (
-                  <pre className="whitespace-pre-wrap break-words font-mono text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>
-                    {data.output}
-                  </pre>
-                ) : (
-                  <div className="uwu-markdown" style={{ fontSize: FONT_SIZES.output }}>
-                    <ReactMarkdown>{data.output}</ReactMarkdown>
-                  </div>
-                )
+                data.output.mode === 'text' ? (
+                  showRaw ? (
+                    <pre className="whitespace-pre-wrap break-words font-mono text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>
+                      {data.output.text}
+                    </pre>
+                  ) : (
+                    <div className="uwu-markdown" style={{ fontSize: FONT_SIZES.output }}>
+                      <ReactMarkdown>{data.output.text}</ReactMarkdown>
+                    </div>
+                  )
+                ) : data.output.mode === 'image' ? (
+                  <ImageOutputRenderer images={data.output.images} />
+                ) : data.output.mode === 'component' ? (
+                  <ComponentOutputRenderer code={data.output.code} />
+                ) : null
+              ) : data.isRunning && outputMode === 'image' ? (
+                <div className="flex items-center gap-2 text-zinc-400 text-[13px]">
+                  <ImageIcon className="h-4 w-4 animate-pulse" />
+                  <span className="italic">Generating image...</span>
+                </div>
               ) : (
                 <span className="text-zinc-400/60 italic text-[14px] font-medium">Your output will appear here...</span>
               )}

@@ -22,6 +22,16 @@ export const BOX_DEFAULTS = {
     width: 320,
     height: 190,
   },
+  iframe: {
+    mobile: {
+      width: 402,
+      height: 874,
+    },
+    laptop: {
+      width: 1280,
+      height: 720,
+    },
+  },
   folder: {
     width: 320,
     height: 280,
@@ -34,6 +44,7 @@ export const NODE_TYPES = {
   CONTENT: 'content',
   COMPONENT: 'component',
   DATA2UI: 'data2ui',
+  IFRAME: 'iframe',
   FOLDER: 'folder',
 } as const;
 
@@ -43,6 +54,7 @@ export const ALIAS_PREFIXES = {
   content: 'con',
   component: 'comp',
   data2ui: 'data',
+  iframe: 'iframe',
   folder: 'folder',
 } as const;
 
@@ -52,6 +64,7 @@ export const BOX_BACKGROUNDS = {
   content: 'var(--frost-content)',
   component: 'var(--frost-component)',
   data2ui: 'var(--frost-data2ui)',
+  iframe: 'var(--frost-iframe)',
   folder: 'var(--frost-folder)',
 } as const;
 

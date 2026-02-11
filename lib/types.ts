@@ -11,7 +11,7 @@ export interface BaseNodeData extends Record<string, unknown> {
 export interface GeneratorNodeData extends BaseNodeData {
   type: 'generator';
   input: string;
-  output: string;
+  output: GeneratorOutput | null;
   isRunning: boolean;
   error?: string;
   provider?: AIProvider;  // Set when providers are fetched
@@ -44,6 +44,13 @@ export interface Data2UINodeData extends BaseNodeData {
   outputPath: string; // Path to JSON file in /data/ folder (e.g., "audria/recent-memories.json")
 }
 
+// Iframe box specific data (paste URL → embed)
+export interface IframeNodeData extends BaseNodeData {
+  type: 'iframe';
+  url: string;
+  viewMode: 'mobile' | 'laptop';
+}
+
 // Folder color presets
 export type FolderColor = 'green' | 'blue' | 'red' | 'yellow' | 'purple' | 'pink' | 'orange' | 'gray';
 
@@ -57,15 +64,16 @@ export interface FolderNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type CanvasNodeData = GeneratorNodeData | ContentNodeData | ComponentNodeData | Data2UINodeData | FolderNodeData;
+export type CanvasNodeData = GeneratorNodeData | ContentNodeData | ComponentNodeData | Data2UINodeData | IframeNodeData | FolderNodeData;
 
 // Typed nodes for React Flow
 export type GeneratorNode = Node<GeneratorNodeData, 'generator'>;
 export type ContentNode = Node<ContentNodeData, 'content'>;
 export type ComponentNode = Node<ComponentNodeData, 'component'>;
 export type Data2UINode = Node<Data2UINodeData, 'data2ui'>;
+export type IframeNode = Node<IframeNodeData, 'iframe'>;
 export type FolderNode = Node<FolderNodeData, 'folder'>;
-export type CanvasNode = GeneratorNode | ContentNode | ComponentNode | Data2UINode | FolderNode;
+export type CanvasNode = GeneratorNode | ContentNode | ComponentNode | Data2UINode | IframeNode | FolderNode;
 
 // Type guard for folder nodes
 export function isFolderNode(node: CanvasNode): node is FolderNode {
@@ -76,13 +84,32 @@ export function isFolderNode(node: CanvasNode): node is FolderNode {
 export interface AliasMap {
   [alias: string]: {
     nodeId: string;
-    type: 'generator' | 'content' | 'component' | 'data2ui' | 'folder';
+    type: 'generator' | 'content' | 'component' | 'data2ui' | 'iframe' | 'folder';
     value: string;
   };
 }
 
 // AI Provider types
 export type AIProvider = 'openai' | 'anthropic' | 'google';
+
+// Model capability types
+export type ModelCapability = 'text' | 'image' | 'component';
+
+// Output mode discriminator
+export type OutputMode = 'text' | 'image' | 'component';
+
+// Generated image data
+export interface GeneratedImage {
+  base64: string;
+  mimeType: string;
+  revisedPrompt?: string;
+}
+
+// Structured generator output (discriminated union)
+export type GeneratorOutput =
+  | { mode: 'text'; text: string }
+  | { mode: 'image'; images: GeneratedImage[]; prompt: string }
+  | { mode: 'component'; code: string; error?: string };
 
 // Message content parts for AI SDK
 export type MessageContentPart =
@@ -111,6 +138,7 @@ export interface CanvasState {
     content: number;
     component: number;
     data2ui: number;
+    iframe: number;
     folder: number;
   };
 }

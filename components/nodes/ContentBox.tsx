@@ -138,20 +138,20 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
           </>
         )}
 
-        {/* Header/Tag Section */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-2">
+        {/* Header - drag handle; alias/input have nodrag */}
+        <div className="uwu-drag-handle flex items-center gap-2 px-6 pt-5 pb-2 cursor-grab active:cursor-grabbing">
           {isEditingAlias ? (
             <Input
               value={editingAlias}
               onChange={(e) => setEditingAlias(e.target.value)}
               onBlur={() => commitAlias()}
               onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
+              className="nodrag h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
               autoFocus
             />
           ) : (
             <div
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
+              className="nodrag inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <FileText className="w-3 h-3" />
