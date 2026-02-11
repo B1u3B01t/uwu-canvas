@@ -27,14 +27,14 @@
   --frost-data2ui: oklch(0.97 0.02 45 / 0.6);
   --frost-folder: oklch(0.97 0.02 145 / 0.6);
 
-  /* Surface colors */
-  --uwu-surface: rgba(255, 255, 255, 0.8);
-  --uwu-surface-hover: rgba(241, 241, 241, 0.8);
-  --uwu-border: rgba(255, 255, 255, 0.6);
+  /* Surface colors (warm beige palette) */
+  --uwu-surface: rgba(235, 230, 219, 0.85);
+  --uwu-surface-hover: rgba(221, 214, 199, 0.85);
+  --uwu-border: rgba(221, 214, 199, 0.6);
   --uwu-text: #3f3f46;
   --uwu-text-muted: #a1a1aa;
-  --uwu-input-bg: rgba(255, 255, 255, 0.95);
-  --uwu-input-border: #e4e4e7;
+  --uwu-input-bg: rgba(245, 242, 239, 0.95);
+  --uwu-input-border: #DDD6C7;
 
   /* Resize handle size (dynamically updated by useZoomAwareHandleSize) */
   --resize-handle-size: 4px;

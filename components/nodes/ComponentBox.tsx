@@ -13,7 +13,7 @@ import {
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { getRegistryKeys, getComponentByKey } from '../../lib/registry';
-import { BOX_DEFAULTS, BOX_BACKGROUNDS } from '../../lib/constants';
+import { BOX_DEFAULTS } from '../../lib/constants';
 import type { ComponentNodeData } from '../../lib/types';
 
 interface PromptCopiedMessage {
@@ -84,6 +84,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
   // Early return if node data not found
   if (!data) return null;
 
+  const isInteractive = !!selected;
   const registryKeys = getRegistryKeys();
   const selectedComponent = data.componentKey ? getComponentByKey(data.componentKey) : null;
 
@@ -102,45 +103,54 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
     <div
         className={`
           relative flex flex-col
-          backdrop-blur-md
-          rounded-3xl
-          transition-all duration-150
+          rounded-[32px]
+          border border-[#DDD6C7]
+          transition-all duration-300
           ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
         `}
         style={{
           width: data.width,
           height: data.height,
-          backgroundColor: BOX_BACKGROUNDS.component,
+          backgroundColor: '#E6E1D4',
         }}
       >
+        {/* Custom arc handles */}
+        {selected && (
+          <>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 33 L 12 28 A 16 16 0 0 1 28 12 L 33 12" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 12 L 12 12 A 16 16 0 0 1 28 28 L 28 33" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 7 L 12 12 A 16 16 0 0 0 28 28 L 33 28" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 28 L 12 28 A 16 16 0 0 0 28 12 L 28 7" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </>
+        )}
+
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2 px-6 pt-5 pb-2 nodrag">
           {isEditingAlias ? (
             <Input
               value={editingAlias}
               onChange={(e) => setEditingAlias(e.target.value)}
               onBlur={() => commitAlias()}
               onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-5 w-20 text-[11px] font-mono"
+              className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
               autoFocus
             />
           ) : (
-            <span
-              className="
-                group flex items-center gap-1.5
-                cursor-pointer rounded-full px-2.5 py-1
-                font-mono text-[11px]
-                hover:opacity-80 transition-opacity
-              "
-              style={{
-                backgroundColor: 'var(--pastel-component-bg)',
-                color: 'var(--pastel-component-text)',
-              }}
+            <div
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Layout className="w-3 h-3" />
               {data.alias}
-            </span>
+            </div>
           )}
 
           {/* Component Selector */}
@@ -148,7 +158,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
             value={data.componentKey}
             onValueChange={(value) => updateNode(id, { componentKey: value })}
           >
-            <SelectTrigger className="h-5 w-[100px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
+            <SelectTrigger className="h-6 w-[100px] border-none bg-[#D9D0BE]/50 px-1.5 text-[10px] hover:bg-[#D9D0BE]/80 transition-colors rounded-lg">
               <SelectValue placeholder="Component..." />
             </SelectTrigger>
             <SelectContent>
@@ -170,7 +180,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
           </Select>
 
           {/* View Mode Toggle - Pill-shaped segmented control */}
-          <div className="flex rounded-full bg-zinc-100/80 p-0.5">
+          <div className="flex rounded-full bg-[#D9D0BE]/60 p-0.5">
             <button
               onClick={() => handleViewModeChange('mobile')}
               className={`
@@ -178,7 +188,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
                 flex items-center justify-center
                 transition-all duration-150
                 ${data.viewMode === 'mobile'
-                  ? 'bg-white shadow-sm text-zinc-900'
+                  ? 'bg-[#F5F2EF] shadow-sm text-zinc-700'
                   : 'text-zinc-500 hover:text-zinc-700'
                 }
               `}
@@ -192,7 +202,7 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
                 flex items-center justify-center
                 transition-all duration-150
                 ${data.viewMode === 'laptop'
-                  ? 'bg-white shadow-sm text-zinc-900'
+                  ? 'bg-[#F5F2EF] shadow-sm text-zinc-700'
                   : 'text-zinc-500 hover:text-zinc-700'
                 }
               `}
@@ -219,8 +229,8 @@ function ComponentBoxComponent({ id, selected }: NodeProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-4 pb-4 overflow-hidden">
-          <div className="h-full overflow-hidden rounded-xl border border-zinc-100 bg-white">
+        <div className={`flex-1 px-6 pb-6 overflow-hidden ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
+          <div className="h-full overflow-hidden rounded-2xl border border-[#DDD6C7]/50 bg-white">
             {data.componentKey && selectedComponent ? (
               <iframe
                 src={`/uwu-canvas/preview/${data.componentKey}`}

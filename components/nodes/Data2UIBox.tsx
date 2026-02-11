@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '../ui/select';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
-import { BOX_BACKGROUNDS } from '../../lib/constants';
 import type { Data2UINodeData, GeneratorNodeData } from '../../lib/types';
 
 // Type for recent memories format
@@ -265,6 +264,8 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
 
+  const isInteractive = !!selected;
+
   return (
     <>
       <NodeResizer
@@ -272,10 +273,12 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
         minHeight={190}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!border !rounded-full"
+        handleClassName="!border-0 !rounded-none !w-6 !h-6"
         handleStyle={{
-          backgroundColor: 'var(--accent-data2ui)',
-          borderColor: 'var(--accent-data2ui)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          width: '24px',
+          height: '24px',
         }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
@@ -284,50 +287,58 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
       <div
         className={`
           relative
-          backdrop-blur-md
-          rounded-3xl
-          transition-all duration-150
+          rounded-[32px]
+          border border-[#DDD6C7]
+          transition-all duration-300
           ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
         `}
         style={{
           width: data.width,
           height: data.height,
-          backgroundColor: BOX_BACKGROUNDS.data2ui,
+          backgroundColor: '#E6E1D4',
         }}
       >
+        {/* Custom arc handles */}
+        {selected && (
+          <>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 33 L 12 28 A 16 16 0 0 1 28 12 L 33 12" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 12 L 12 12 A 16 16 0 0 1 28 28 L 28 33" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 7 L 12 12 A 16 16 0 0 0 28 28 L 33 28" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 28 L 12 28 A 16 16 0 0 0 28 12 L 28 7" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </>
+        )}
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2 px-6 pt-5 pb-2">
           {isEditingAlias ? (
             <Input
               value={editingAlias}
               onChange={(e) => setEditingAlias(e.target.value)}
               onBlur={() => commitAlias()}
               onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-5 w-20 text-[11px] font-mono"
+              className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
               autoFocus
             />
           ) : (
-            <span
-              className="
-                group flex items-center gap-1.5
-                cursor-pointer rounded-full px-2.5 py-1
-                font-mono text-[11px]
-                hover:opacity-80 transition-opacity
-              "
-              style={{
-                backgroundColor: 'var(--pastel-data2ui-bg)',
-                color: 'var(--pastel-data2ui-text)',
-              }}
+            <div
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
             >
               <Database className="w-3 h-3" />
               {data.alias}
-            </span>
+            </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-3 px-4 pb-4 h-[calc(100%-52px)] overflow-hidden">
+        <div className={`flex flex-col gap-3 px-6 pb-6 h-[calc(100%-60px)] overflow-hidden ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
           {/* Source -> Output in one line */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <div className="flex-1 min-w-0">
@@ -335,7 +346,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
                 value={data.sourceAlias}
                 onValueChange={(value) => updateNode(id, { sourceAlias: value })}
               >
-                <SelectTrigger className="h-8 w-full text-[11px] bg-zinc-50/50 border-zinc-100 hover:bg-zinc-100/50 transition-colors rounded-lg">
+                <SelectTrigger className="h-8 w-full text-[11px] bg-[#D9D0BE]/40 border-[#DDD6C7] hover:bg-[#D9D0BE]/60 transition-colors rounded-lg">
                   <SelectValue placeholder="Source..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -353,13 +364,13 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
                 </SelectContent>
               </Select>
             </div>
-            <ArrowRight className="h-4 w-4 text-zinc-300 flex-shrink-0" />
+            <ArrowRight className="h-4 w-4 text-[#D9D0BE] flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Select
                 value={data.outputPath}
                 onValueChange={(value) => updateNode(id, { outputPath: value })}
               >
-                <SelectTrigger className="h-8 w-full text-[11px] bg-zinc-50/50 border-zinc-100 hover:bg-zinc-100/50 transition-colors rounded-lg">
+                <SelectTrigger className="h-8 w-full text-[11px] bg-[#D9D0BE]/40 border-[#DDD6C7] hover:bg-[#D9D0BE]/60 transition-colors rounded-lg">
                   <SelectValue placeholder={isLoadingFiles ? "Loading..." : "Output..."} />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,15 +399,15 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
             onClick={handleApply}
             disabled={isApplying || !data.sourceAlias || !data.outputPath}
             className={`
-              w-full h-9 rounded-lg
+              w-full h-9 rounded-xl
               flex items-center justify-center gap-2
-              text-[13px] font-medium
+              text-[12px] font-bold uppercase tracking-wider
               transition-all duration-150
               active:scale-[0.98]
               disabled:opacity-50 disabled:cursor-not-allowed
               ${applyStatus === 'success'
                 ? 'bg-emerald-500 text-white'
-                : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                : 'bg-[#3F3C39] text-white hover:bg-[#2D2A26]'
               }
             `}
           >
@@ -415,7 +426,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
           {/* Status Display - Scrollable area */}
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
             {applyStatus === 'error' && errorMessage && (
-              <div className="flex-shrink-0 rounded-lg bg-red-50 border border-red-100 p-2">
+              <div className="flex-shrink-0 rounded-xl bg-red-50 border border-red-100 p-2">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
                   <p className="text-[11px] text-red-600">{errorMessage}</p>
@@ -424,7 +435,7 @@ function Data2UIBoxComponent({ id, selected }: NodeProps) {
             )}
 
             {data.sourceAlias && data.outputPath && applyStatus !== 'error' && (
-              <div className="flex-shrink-0 rounded-lg bg-zinc-50/50 p-2">
+              <div className="flex-shrink-0 rounded-xl bg-[#DDD6C7]/30 p-2">
                 <p className="text-[11px] text-zinc-500">
                   <span className="font-mono text-zinc-600">@{data.sourceAlias}</span>
                   <span className="mx-1.5">→</span>

@@ -21,6 +21,7 @@ import { ComponentBox } from './nodes/ComponentBox';
 import { Data2UIBox } from './nodes/Data2UIBox';
 import { FolderBox } from './nodes/FolderBox';
 import { Toolbar } from './Toolbar';
+import { PulseEffect } from './PulseEffect';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { useCanvasStore } from '../hooks/useCanvasStore';
 import { CANVAS_CONFIG } from '../lib/constants';
@@ -261,11 +262,12 @@ export function Canvas() {
         selectionMode={SelectionMode.Partial}
       >
         <Background
-          variant={BackgroundVariant.Dots}
+          variant={BackgroundVariant.Lines}
           gap={CANVAS_CONFIG.backgroundGap}
           size={CANVAS_CONFIG.backgroundSize}
           color={themeColors.dotsColor}
         />
+        <PulseEffect />
         <Toolbar />
       </ReactFlow>
 

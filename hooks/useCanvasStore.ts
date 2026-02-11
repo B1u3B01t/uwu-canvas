@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, FolderNodeData, FolderColor, AliasMap, MessageContentPart } from '../lib/types';
+import type { CanvasNode, GeneratorNodeData, ContentNodeData, ComponentNodeData, Data2UINodeData, FolderNodeData, FolderColor, AliasMap, MessageContentPart, Pulse } from '../lib/types';
 import { isFolderNode } from '../lib/types';
 import { BOX_DEFAULTS, ALIAS_PREFIXES } from '../lib/constants';
 
@@ -24,6 +24,9 @@ interface CanvasStore {
     folder: number;
   };
   isDarkMode: boolean;
+
+  // Pulse effects
+  pulses: Pulse[];
 
   // Deletion animation & undo
   deletingNodeIds: Set<string>;
@@ -66,6 +69,10 @@ interface CanvasStore {
   resolveAllAliases: (text: string) => string;
   buildMessageContent: (text: string) => MessageContentPart[];
   getNodeByAlias: (alias: string) => CanvasNode | undefined;
+
+  // Pulse effects
+  triggerPulse: (nodeId: string) => void;
+  removePulse: (pulseId: string) => void;
 
   // Generator specific
   setGeneratorOutput: (nodeId: string, output: string) => void;
@@ -153,6 +160,9 @@ export const useCanvasStore = create<CanvasStore>()(
   selectedNodeId: null,
   counters: initialState.counters,
   isDarkMode: getInitialDarkMode(),
+
+  // Pulse effects
+  pulses: [],
 
   // Deletion animation & undo
   deletingNodeIds: new Set<string>(),
@@ -658,6 +668,25 @@ export const useCanvasStore = create<CanvasStore>()(
     return parts;
   },
 
+  triggerPulse: (nodeId) => {
+    const node = get().nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const pulseId = `pulse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newPulse: Pulse = {
+      id: pulseId,
+      position: node.position,
+      timestamp: Date.now(),
+    };
+    set({ pulses: [...get().pulses, newPulse] });
+    setTimeout(() => {
+      get().removePulse(pulseId);
+    }, 2000);
+  },
+
+  removePulse: (pulseId) => {
+    set({ pulses: get().pulses.filter(p => p.id !== pulseId) });
+  },
+
   setGeneratorOutput: (nodeId, output) => {
     set({
       nodes: get().nodes.map((node) =>
@@ -676,6 +705,9 @@ export const useCanvasStore = create<CanvasStore>()(
           : node
       ) as CanvasNode[],
     });
+    if (isRunning) {
+      get().triggerPulse(nodeId);
+    }
   },
 
   setGeneratorError: (nodeId, error) => {

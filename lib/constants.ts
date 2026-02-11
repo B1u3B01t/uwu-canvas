@@ -90,8 +90,8 @@ export const CANVAS_CONFIG = {
   maxZoom: 2,
   // Light mode colors
   light: {
-    background: 'linear-gradient(135deg, #fafafa 0%, #ffffff 50%, #f5f5f7 100%)',
-    dotsColor: 'rgba(0,0,0,0.15)',
+    background: '#EBE6DB',
+    dotsColor: '#e8e1d9',
   },
   // Dark mode colors
   dark: {

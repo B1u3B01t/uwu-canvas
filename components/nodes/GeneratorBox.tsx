@@ -9,18 +9,16 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
 import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { Toggle } from '../ui/toggle';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
-import { BOX_BACKGROUNDS, FONT_SIZES, INPUT_OUTPUT_STYLE } from '../../lib/constants';
+import { FONT_SIZES } from '../../lib/constants';
 import type { GeneratorNodeData, AIProvider } from '../../lib/types';
-
-interface GeneratorBoxProps extends NodeProps {
-  data: GeneratorNodeData;
-}
 
 interface ProviderData {
   name: string;
@@ -127,16 +125,6 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
       });
   }, [data, id, updateNode]);
 
-  const handleProviderChange = useCallback((provider: AIProvider) => {
-    const models = providersData[provider]?.models;
-    if (models) {
-      updateNode(id, {
-        provider,
-        model: models[0].id // Reset to first model of new provider
-      });
-    }
-  }, [id, updateNode, providersData]);
-
   const handleRun = useCallback(async () => {
     if (!data || data.isRunning) return;
 
@@ -216,20 +204,21 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   // Early return if node data not found - AFTER all hooks
   if (!data) return null;
 
-  // Get input/output styles based on backgroundType setting
-  const inputStyle = INPUT_OUTPUT_STYLE[INPUT_OUTPUT_STYLE.backgroundType];
+  const isInteractive = !!selected;
 
   return (
     <>
       <NodeResizer
-        minWidth={280}
-        minHeight={300}
+        minWidth={320}
+        minHeight={380}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!border !rounded-full"
+        handleClassName="!border-0 !rounded-none !w-6 !h-6"
         handleStyle={{
-          backgroundColor: 'var(--accent-generator)',
-          borderColor: 'var(--accent-generator)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          width: '24px',
+          height: '24px',
         }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
@@ -237,206 +226,311 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
       />
       <div
         className={`
-          relative
-          backdrop-blur-md
-          rounded-3xl
-          transition-all duration-150
+          relative flex flex-col transition-all duration-300
           ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
           ${justCompleted ? 'uwu-node-complete' : ''}
         `}
         style={{
           width: data.width,
           height: data.height,
-          backgroundColor: BOX_BACKGROUNDS.generator,
         }}
       >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-          {isEditingAlias ? (
-            <Input
-              value={editingAlias}
-              onChange={(e) => setEditingAlias(e.target.value)}
-              onBlur={() => commitAlias()}
-              onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-              className="h-5 w-20 text-[11px] font-mono"
-              autoFocus
-            />
-          ) : (
-            <span
-              className="
-                group flex items-center gap-1.5
-                cursor-pointer rounded-full px-2.5 py-1
-                font-mono text-[11px]
-                hover:opacity-80 transition-opacity
-              "
-              style={{
-                backgroundColor: 'var(--pastel-generator-bg)',
-                color: 'var(--pastel-generator-text)',
-              }}
-              onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
+        {/* Custom arc handles */}
+        {selected && (
+          <>
+            {/* Top Left Arc */}
+            <svg
+              className="absolute pointer-events-none z-[1000]"
+              style={{ top: -16, left: -16, width: 40, height: 40 }}
+              viewBox="0 0 40 40"
             >
-              <Sparkles className="w-3 h-3" />
-              {data.alias}
-            </span>
-          )}
+              <path
+                d="M 12 33 L 12 28 A 16 16 0 0 1 28 12 L 33 12"
+                fill="none"
+                stroke="#D4CDBD"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {/* Top Right Arc */}
+            <svg
+              className="absolute pointer-events-none z-[1000]"
+              style={{ top: -16, right: -16, width: 40, height: 40 }}
+              viewBox="0 0 40 40"
+            >
+              <path
+                d="M 7 12 L 12 12 A 16 16 0 0 1 28 28 L 28 33"
+                fill="none"
+                stroke="#D4CDBD"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {/* Bottom Left Arc */}
+            <svg
+              className="absolute pointer-events-none z-[1000]"
+              style={{ bottom: -16, left: -16, width: 40, height: 40 }}
+              viewBox="0 0 40 40"
+            >
+              <path
+                d="M 12 7 L 12 12 A 16 16 0 0 0 28 28 L 33 28"
+                fill="none"
+                stroke="#D4CDBD"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {/* Bottom Right Arc */}
+            <svg
+              className="absolute pointer-events-none z-[1000]"
+              style={{ bottom: -16, right: -16, width: 40, height: 40 }}
+              viewBox="0 0 40 40"
+            >
+              <path
+                d="M 7 28 L 12 28 A 16 16 0 0 0 28 12 L 28 7"
+                fill="none"
+                stroke="#D4CDBD"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
+        )}
 
-          {/* Provider & Model Selection */}
-          {isLoadingProviders ? (
-            <span className="text-[10px] text-zinc-400">...</span>
-          ) : !hasProviders ? (
-            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600">
-              No provider — add API keys to .env.local
-            </span>
-          ) : currentProvider && currentProviderData ? (
-            <>
-              <Select
-                value={currentProvider}
-                onValueChange={(value) => handleProviderChange(value as AIProvider)}
-                disabled={data.isRunning}
-              >
-                <SelectTrigger className="h-5 w-[80px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {providerKeys.map((key) => (
-                    <SelectItem key={key} value={key} className="text-xs">
-                      {providersData[key].name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={currentModel}
-                onValueChange={(value) => updateNode(id, { model: value })}
-                disabled={data.isRunning}
-              >
-                <SelectTrigger className="h-5 w-[100px] border-none bg-zinc-50/50 px-1.5 text-[10px] hover:bg-zinc-100/50 transition-colors">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentProviderData.models.map((model) => (
-                    <SelectItem key={model.id} value={model.id} className="text-xs">
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          ) : null}
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-col gap-3 px-4 pb-4 h-[calc(100%-52px)]">
-          {/* Input Section */}
-          <div className="flex-shrink-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Input</label>
-              <button
-                onClick={data.isRunning ? handleStop : handleRun}
-                disabled={!hasProviders || isLoadingProviders}
-                className={`
-                  h-7 w-7 rounded-lg
-                  flex items-center justify-center
-                  transition-all duration-150
-                  active:scale-95
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  ${data.isRunning
-                    ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                    : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100'
-                  }
-                `}
-              >
-                {data.isRunning ? (
-                  <Square className="h-4 w-4" strokeWidth={2} />
-                ) : (
-                  <Play className="h-4 w-4 ml-0.5" strokeWidth={2} />
-                )}
-              </button>
+        {/* Top Part: Header + Input (3D card with shadow) */}
+        <div
+          className={`
+            relative z-20 flex flex-col rounded-3xl overflow-hidden bg-white
+            transition-all duration-300 ease-out
+            ${data.isRunning
+              ? 'border-[2px] border-[#DDD6C7] shadow-none translate-y-[7px]'
+              : 'border-[2px] border-[#2D2A26] shadow-[0_7px_0_0_#2D2A26]'}
+          `}
+        >
+          {/* Dark Header */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#3F3C39] nodrag">
+            <div className="flex items-center gap-2.5">
+              {/* Squircle Icon */}
+              <div className="w-6 h-6 rounded-[6px] bg-zinc-800 flex items-center justify-center border border-zinc-600">
+                <span className="text-zinc-200 text-sm font-medium leading-none">✦</span>
+              </div>
+              <span className="font-semibold text-[15px] text-zinc-100 tracking-tight">
+                Generator
+              </span>
             </div>
-            <AutocompleteTextarea
-              value={data.input}
-              onChange={(value) => updateNode(id, { input: value })}
-              placeholder="Enter prompt... Use @alias to reference other boxes"
-              className={`min-h-[60px] ${inputStyle.background} ${inputStyle.border} ${inputStyle.focusBorder} rounded-lg`}
-              style={{ fontSize: FONT_SIZES.input }}
-              disabled={data.isRunning}
-            />
+
+            {/* Run/Stop Button in Header */}
+            <button
+              onClick={data.isRunning ? handleStop : handleRun}
+              disabled={!hasProviders || isLoadingProviders}
+              className={`
+                h-8 px-4 rounded-full
+                flex items-center justify-center gap-2
+                transition-all duration-200
+                active:scale-95
+                disabled:opacity-50 disabled:cursor-not-allowed
+                ${data.isRunning
+                  ? 'bg-zinc-700 text-zinc-300'
+                  : 'bg-black hover:bg-zinc-900 text-white shadow-lg'
+                }
+              `}
+            >
+              {data.isRunning ? (
+                <>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Stop</span>
+                  <Square className="h-3 w-3 fill-zinc-300" strokeWidth={0} />
+                </>
+              ) : (
+                <>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Run</span>
+                  <Play className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
+                </>
+              )}
+            </button>
           </div>
 
-          {/* Output Section */}
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Output</label>
-                {data.isRunning && (
-                  <span className="uwu-pulse-dot" />
-                )}
+          {/* Input Area */}
+          <div className={`p-4 bg-white ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
+            {/* Provider status */}
+            {isLoadingProviders ? (
+              <div className="mb-2">
+                <span className="text-[10px] text-zinc-400">...</span>
               </div>
-              {data.output && !data.isRunning && (
-                <div className="flex items-center gap-0.5">
-                  <Toggle
-                    pressed={showRaw}
-                    onPressedChange={setShowRaw}
-                    size="sm"
-                    aria-label={showRaw ? 'Show formatted' : 'Show raw markdown'}
+            ) : !hasProviders ? (
+              <div className="mb-2">
+                <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600">
+                  No provider — add API keys to .env.local
+                </span>
+              </div>
+            ) : null}
+
+            <div className="relative group">
+              <AutocompleteTextarea
+                value={data.input}
+                onChange={(value) => updateNode(id, { input: value })}
+                onSubmit={handleRun}
+                placeholder="Type here... Use @alias to reference other boxes"
+                className="
+                  w-full min-h-[140px]
+                  rounded-2xl
+                  p-4 pb-14
+                  bg-[#F5F2EF]
+                  text-[15px] text-zinc-800
+                  placeholder:text-zinc-400/80
+                  focus:ring-0 resize-none
+                  border-none
+                  font-medium leading-relaxed
+                "
+                style={{ fontSize: '15px' }}
+                disabled={data.isRunning}
+              />
+
+              {/* Combined Model Selection */}
+              {hasProviders && currentProvider && currentProviderData && (
+                <div className="absolute bottom-2 left-2">
+                  <Select
+                    value={`${currentProvider}:${currentModel}`}
+                    onValueChange={(val) => {
+                      const [provider, ...modelParts] = val.split(':');
+                      const model = modelParts.join(':');
+                      updateNode(id, { provider: provider as AIProvider, model });
+                    }}
+                    disabled={data.isRunning}
                   >
-                    {showRaw ? (
-                      <Eye className="h-3.5 w-3.5" />
-                    ) : (
-                      <Code className="h-3.5 w-3.5" />
-                    )}
-                  </Toggle>
-                  <button
-                    onClick={handleCopy}
-                    className="h-6 w-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all duration-150"
-                  >
-                    {copied ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+                    <SelectTrigger className="h-9 w-auto min-w-[120px] text-[12px] font-semibold rounded-xl border-none px-3 gap-2 flex items-center text-zinc-600">
+                      <SelectValue>
+                        {currentProviderData.models.find(m => m.id === currentModel)?.name || 'Select Model'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] overflow-y-auto min-w-[180px] rounded-2xl border-zinc-100 shadow-2xl">
+                      {providerKeys.map((pKey) => (
+                        <SelectGroup key={pKey}>
+                          <SelectLabel className="px-3 py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                            {providersData[pKey].name}
+                          </SelectLabel>
+                          {providersData[pKey].models.map((m) => (
+                            <SelectItem
+                              key={`${pKey}:${m.id}`}
+                              value={`${pKey}:${m.id}`}
+                              className="text-[13px] py-2.5 pl-4 rounded-lg focus:bg-zinc-50"
+                            >
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
+          </div>
+        </div>
 
-            {/* Error State */}
-            {data.error ? (
-              <div className="flex-1 overflow-auto rounded-lg border border-red-200 bg-red-50 p-2.5">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-red-600 font-medium">Generation failed</p>
-                    <p className="text-[12px] text-red-500 mt-0.5">{data.error}</p>
-                  </div>
+        {/* Bottom Part: Output (Layered Behind with overlap) */}
+        <div
+          className={`
+            relative z-10 flex-1 -mt-5 pt-9 pb-4 px-6
+            bg-[#E6E1D4] rounded-b-[32px] border-[#DDD6C7] border-1
+            transition-all duration-300
+            overflow-y-auto custom-scrollbar
+            ${isInteractive ? 'nodrag nowheel nopan' : ''}
+          `}
+        >
+          {/* Error State */}
+          {data.error ? (
+            <div className="flex-1 overflow-auto rounded-lg border border-red-200 bg-red-50 p-2.5">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-red-600 font-medium">Generation failed</p>
+                  <p className="text-[12px] text-red-500 mt-0.5">{data.error}</p>
                 </div>
-                <button
-                  onClick={handleRun}
-                  disabled={!hasProviders || isLoadingProviders}
-                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Retry
-                </button>
               </div>
-            ) : (
-              <div className={`flex-1 overflow-auto rounded-lg border ${inputStyle.border} ${inputStyle.background} p-2.5`}>
-                {data.output ? (
-                  showRaw ? (
-                    <pre className="whitespace-pre-wrap break-words font-mono text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>
-                      {data.output}
-                    </pre>
+              <button
+                onClick={handleRun}
+                disabled={!hasProviders || isLoadingProviders}
+                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {/* Output header row: alias badge + toggle/copy */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isEditingAlias ? (
+                    <Input
+                      value={editingAlias}
+                      onChange={(e) => setEditingAlias(e.target.value)}
+                      onBlur={() => commitAlias()}
+                      onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
+                      className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
+                      autoFocus
+                    />
                   ) : (
-                    <div className="uwu-markdown" style={{ fontSize: FONT_SIZES.output }}>
-                      <ReactMarkdown>{data.output}</ReactMarkdown>
+                    <div
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      {data.alias}
                     </div>
-                  )
-                ) : (
-                  <p className="text-zinc-400 italic" style={{ fontSize: FONT_SIZES.output }}>Output will appear here...</p>
+                  )}
+                  {data.isRunning && (
+                    <span className="uwu-pulse-dot" />
+                  )}
+                </div>
+                {data.output && !data.isRunning && (
+                  <div className="flex items-center gap-0.5">
+                    <Toggle
+                      pressed={showRaw}
+                      onPressedChange={setShowRaw}
+                      size="sm"
+                      aria-label={showRaw ? 'Show formatted' : 'Show raw markdown'}
+                    >
+                      {showRaw ? (
+                        <Eye className="h-3.5 w-3.5" />
+                      ) : (
+                        <Code className="h-3.5 w-3.5" />
+                      )}
+                    </Toggle>
+                    <button
+                      onClick={handleCopy}
+                      className="h-6 w-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-[#D9D0BE] transition-all duration-150"
+                    >
+                      {copied ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+
+              {/* Output content */}
+              {data.output ? (
+                showRaw ? (
+                  <pre className="whitespace-pre-wrap break-words font-mono text-zinc-700" style={{ fontSize: FONT_SIZES.output }}>
+                    {data.output}
+                  </pre>
+                ) : (
+                  <div className="uwu-markdown" style={{ fontSize: FONT_SIZES.output }}>
+                    <ReactMarkdown>{data.output}</ReactMarkdown>
+                  </div>
+                )
+              ) : (
+                <span className="text-zinc-400/60 italic text-[14px] font-medium">Your output will appear here...</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

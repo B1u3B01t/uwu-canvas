@@ -76,6 +76,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
 
   if (!data) return null;
 
+  const isInteractive = !!selected;
   const colors = FOLDER_COLORS[data.color];
   const ChevronIcon = data.isExpanded ? ChevronDown : ChevronRight;
 
@@ -86,10 +87,12 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
         minHeight={120}
         isVisible={selected}
         lineClassName="!border-transparent"
-        handleClassName="!border !rounded-full"
+        handleClassName="!border-0 !rounded-none !w-6 !h-6"
         handleStyle={{
-          backgroundColor: colors.body,
-          borderColor: colors.body,
+          backgroundColor: 'transparent',
+          border: 'none',
+          width: '24px',
+          height: '24px',
         }}
         onResize={(_, params) => {
           updateNode(id, { width: params.width, height: params.height });
@@ -98,9 +101,9 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
       <div
         className={`
           relative
-          backdrop-blur-md
-          rounded-3xl
-          transition-all duration-150
+          rounded-[32px]
+          border border-[#DDD6C7]
+          transition-all duration-300
           overflow-hidden
           ${isDeleting ? 'uwu-node-exit' : 'uwu-node-enter'}
         `}
@@ -110,6 +113,23 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
           backgroundColor: colors.frost,
         }}
       >
+        {/* Custom arc handles */}
+        {selected && (
+          <>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 33 L 12 28 A 16 16 0 0 1 28 12 L 33 12" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ top: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 12 L 12 12 A 16 16 0 0 1 28 28 L 28 33" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, left: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 12 7 L 12 12 A 16 16 0 0 0 28 28 L 33 28" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg className="absolute pointer-events-none z-[1000]" style={{ bottom: -16, right: -16, width: 40, height: 40 }} viewBox="0 0 40 40">
+              <path d="M 7 28 L 12 28 A 16 16 0 0 0 28 12 L 28 7" fill="none" stroke="#D4CDBD" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </>
+        )}
         {/* Background folder SVG */}
         <div className="absolute inset-0 top-8 pointer-events-none opacity-15">
           <FolderIcon
@@ -120,9 +140,9 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
         </div>
 
         {/* Content overlay */}
-        <div className="relative z-10 h-full flex flex-col">
+        <div className={`relative z-10 h-full flex flex-col ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
           {/* Header */}
-          <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          <div className="flex items-center gap-2 px-6 pt-5 pb-2">
             <FolderIcon tabColor={colors.tab} bodyColor={colors.body} size={18} />
 
             {isEditingAlias ? (
@@ -131,25 +151,16 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                 onChange={(e) => setEditingAlias(e.target.value)}
                 onBlur={() => commitAlias()}
                 onKeyDown={(e) => e.key === 'Enter' && commitAlias()}
-                className="h-5 w-24 text-[11px] font-mono"
+                className="h-6 w-24 text-[11px] font-bold bg-[#D9D0BE] border-none focus:ring-1 focus:ring-zinc-400"
                 autoFocus
               />
             ) : (
-              <span
-                className="
-                  group flex items-center gap-1
-                  cursor-pointer rounded-full px-2 py-0.5
-                  font-mono text-[11px]
-                  hover:opacity-80 transition-opacity
-                "
-                style={{
-                  backgroundColor: colors.pastelBg,
-                  color: colors.pastelText,
-                }}
+              <div
+                className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md bg-[#D9D0BE] w-fit text-[11px] font-bold text-zinc-500 uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => { setEditingAlias(data.alias); setIsEditingAlias(true); }}
               >
                 {data.alias}
-              </span>
+              </div>
             )}
 
             <div className="ml-auto flex items-center gap-0.5">
@@ -158,7 +169,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                   <button
                     className="
                       p-1 rounded-md
-                      text-zinc-400 hover:text-zinc-600 hover:bg-white/30
+                      text-zinc-400 hover:text-zinc-600 hover:bg-[#DDD6C7]/50
                       active:scale-95
                       transition-all duration-100
                       cursor-pointer
@@ -194,7 +205,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                 onClick={() => toggleFolderExpanded(id)}
                 className="
                   p-1 rounded-md
-                  text-zinc-400 hover:text-zinc-600 hover:bg-white/30
+                  text-zinc-400 hover:text-zinc-600 hover:bg-[#DDD6C7]/50
                   active:scale-95
                   transition-all duration-100
                   cursor-pointer
@@ -206,7 +217,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 px-4 pb-3 overflow-hidden">
+          <div className="flex-1 px-6 pb-4 overflow-hidden">
             {data.isExpanded ? (
               <div className="flex flex-col h-full">
                 {/* Child list */}
@@ -217,7 +228,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                       className="
                         group flex items-center gap-2
                         px-2 py-1.5 rounded-lg
-                        bg-white/30 hover:bg-white/50
+                        bg-[#DDD6C7]/30 hover:bg-[#DDD6C7]/50
                         cursor-pointer
                         transition-colors duration-100
                       "
@@ -234,7 +245,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                         className="
                           ml-auto opacity-0 group-hover:opacity-100
                           p-0.5 rounded
-                          text-zinc-400 hover:text-zinc-600 hover:bg-white/50
+                          text-zinc-400 hover:text-zinc-600 hover:bg-[#DDD6C7]/50
                           active:scale-90
                           transition-all duration-100
                           cursor-pointer
@@ -249,7 +260,7 @@ function FolderBoxComponent({ id, selected }: NodeProps) {
                     </div>
                   ))}
                   {childNodes.length === 0 && (
-                    <div className="flex items-center justify-center h-full min-h-[60px] rounded-xl border border-dashed border-zinc-300/50">
+                    <div className="flex items-center justify-center h-full min-h-[60px] rounded-xl border border-dashed border-[#D9D0BE]">
                       <p className="text-[11px] text-zinc-400">
                         Right-click nodes to add
                       </p>

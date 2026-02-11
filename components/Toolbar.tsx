@@ -46,7 +46,7 @@ export function Toolbar() {
   const getContainerSpreadingStyle = () => {
     if (!hoveredType) return {};
     return {
-      backgroundColor: `color-mix(in oklch, ${ACCENT_COLORS[hoveredType]} 8%, rgba(255,255,255,0.8))`,
+      backgroundColor: `color-mix(in oklch, ${ACCENT_COLORS[hoveredType]} 8%, rgba(235, 230, 219, 0.85))`,
       transition: 'background-color 150ms',
     };
   };
@@ -70,7 +70,7 @@ export function Toolbar() {
         <div className="flex items-center gap-3">
         {/* Node Creation Buttons - Glassmorphic Pill */}
         <div
-          className="flex items-center gap-0 rounded-full bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg p-1.5"
+          className="flex items-center gap-0 rounded-full bg-[#EBE6DB]/90 backdrop-blur-xl border border-[#DDD6C7]/60 shadow-lg p-1.5"
           style={getContainerSpreadingStyle()}
         >
           {BOX_TYPES.map(({ type, label, icon: Icon, accent }, index) => (
@@ -96,7 +96,7 @@ export function Toolbar() {
         </div>
 
         {/* Zoom Controls - Glassmorphic Pill */}
-        <div className="flex items-center gap-0.5 rounded-full bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg p-1">
+        <div className="flex items-center gap-0.5 rounded-full bg-[#EBE6DB]/90 backdrop-blur-xl border border-[#DDD6C7]/60 shadow-lg p-1">
           <Tooltip content="Zoom Out">
             <button
               onClick={() => zoomOut()}
@@ -154,7 +154,7 @@ export function Toolbar() {
             className="
               w-9 h-9 rounded-full
               flex items-center justify-center
-              bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg
+              bg-[#EBE6DB]/90 backdrop-blur-xl border border-[#DDD6C7]/60 shadow-lg
               text-zinc-500
               hover:text-zinc-900 hover:bg-zinc-100/80
               active:scale-95

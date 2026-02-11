@@ -95,6 +95,13 @@ export interface GeneratorMessage {
   content: string | MessageContentPart[];
 }
 
+// Pulse effect for generator run animation
+export interface Pulse {
+  id: string;
+  position: { x: number; y: number };
+  timestamp: number;
+}
+
 // Canvas state
 export interface CanvasState {
   nodes: CanvasNode[];
