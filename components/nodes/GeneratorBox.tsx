@@ -215,7 +215,19 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            // If streamed output looks like a JSX/TSX component, show as component preview
+            const jsxMatch = output.match(/```(?:jsx|tsx|javascript|react)?\s*\n?([\s\S]*?)```/);
+            if (jsxMatch && jsxMatch[1].trim().length > 0) {
+              const extracted = jsxMatch[1].trim();
+              if (/export\s+(default\s+)?(function|const|var|class)\s+\w+/.test(extracted) || /export\s+default\s+\w+/.test(extracted)) {
+                setGeneratorOutput(id, { mode: 'component', code: output });
+                break;
+              }
+            }
+            setGeneratorOutput(id, { mode: 'text', text: output });
+            break;
+          }
 
           const chunk = decoder.decode(value, { stream: true });
           output += chunk;
