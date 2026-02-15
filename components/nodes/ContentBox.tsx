@@ -163,6 +163,70 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
         {/* Content Section */}
         <div className={`px-6 pb-6 h-[calc(100%-60px)] overflow-y-auto custom-scrollbar ${isInteractive ? 'nodrag nowheel nopan' : ''}`}>
           {data.fileData ? (
+            data.fileData.fileType.startsWith('image/') ? (
+              /* Image preview */
+              <div className="h-full flex flex-col rounded-2xl overflow-hidden relative group">
+                <img
+                  src={`data:${data.fileData.fileType};base64,${data.fileData.data}`}
+                  alt={data.fileData.fileName}
+                  className="w-full h-full object-contain rounded-2xl"
+                  loading="lazy"
+                  draggable={false}
+                />
+                <button
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 text-white rounded-lg p-1.5"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = `data:${data.fileData!.fileType};base64,${data.fileData!.data}`;
+                    link.download = data.fileData!.fileName;
+                    link.click();
+                  }}
+                  title="Download image"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : data.fileData.fileType.startsWith('video/') ? (
+              /* Video preview */
+              <div className="h-full flex flex-col rounded-2xl overflow-hidden relative group">
+                <video
+                  src={`data:${data.fileData.fileType};base64,${data.fileData.data}`}
+                  controls
+                  className="w-full h-full object-contain rounded-2xl"
+                  draggable={false}
+                />
+                <button
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 text-white rounded-lg p-1.5"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = `data:${data.fileData!.fileType};base64,${data.fileData!.data}`;
+                    link.download = data.fileData!.fileName;
+                    link.click();
+                  }}
+                  title="Download video"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : data.fileData.fileType.startsWith('audio/') ? (
+              /* Audio preview */
+              <div className="h-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300/50 bg-[#DDD6C7]/30">
+                <div className="w-14 h-14 rounded-2xl bg-[#D9D0BE] flex items-center justify-center shadow-sm">
+                  <span className="text-3xl">🎵</span>
+                </div>
+                <div className="text-center px-3">
+                  <div className="font-bold text-[13px] text-zinc-700 truncate max-w-full" title={data.fileData.fileName}>
+                    {data.fileData.fileName}
+                  </div>
+                </div>
+                <audio
+                  src={`data:${data.fileData.fileType};base64,${data.fileData.data}`}
+                  controls
+                  className="w-full max-w-[220px]"
+                />
+              </div>
+            ) : (
+            /* Generic file display (non-media) */
             <div className="h-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300/50 bg-[#DDD6C7]/30">
               {/* File icon with container */}
               <div className="w-14 h-14 rounded-2xl bg-[#D9D0BE] flex items-center justify-center shadow-sm">
@@ -198,6 +262,7 @@ function ContentBoxComponent({ id, selected }: NodeProps) {
                 DOWNLOAD
               </button>
             </div>
+            )
           ) : (
             <textarea
               value={data.content || ''}

@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     // Ensure path ends with .json
     const finalPath = sanitizedPath.endsWith('.json') ? sanitizedPath : `${sanitizedPath}.json`;
 
-    // Ensure path is within /app/data directory
-    const dataDir = join(process.cwd(), 'app', 'data');
+    // Ensure path is within the uwu-canvas data directory
+    const dataDir = process.env.UWU_DATA_DIR || join(process.cwd(), 'data', 'uwu-canvas');
     const filePath = join(dataDir, finalPath);
 
     // Verify the normalized path is still within the data directory

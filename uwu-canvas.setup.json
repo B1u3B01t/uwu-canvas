@@ -1,0 +1,49 @@
+{
+  "name": "uwu-canvas",
+  "description": "AI-powered visual canvas for Next.js — drag and drop into any Next.js app",
+  "prerequisites": {
+    "framework": "next.js (app router)",
+    "react": ">=18",
+    "typescript": true,
+    "tailwindcss": true
+  },
+  "dependencies": [
+    "@xyflow/react",
+    "zustand",
+    "react-live",
+    "react-markdown",
+    "lucide-react",
+    "ai",
+    "@ai-sdk/openai",
+    "@ai-sdk/anthropic",
+    "@ai-sdk/google",
+    "@radix-ui/react-dialog",
+    "@radix-ui/react-dropdown-menu",
+    "@radix-ui/react-context-menu",
+    "@radix-ui/react-popover",
+    "@radix-ui/react-select",
+    "@radix-ui/react-tooltip",
+    "@radix-ui/react-slot",
+    "clsx",
+    "tailwind-merge",
+    "class-variance-authority",
+    "cmdk"
+  ],
+  "env": {
+    "OPENAI_API_KEY": {
+      "required": false,
+      "description": "OpenAI API key for GPT models"
+    },
+    "ANTHROPIC_API_KEY": {
+      "required": false,
+      "description": "Anthropic API key for Claude models"
+    },
+    "GOOGLE_GENERATIVE_AI_API_KEY": {
+      "required": false,
+      "description": "Google AI API key for Gemini models"
+    }
+  },
+  "envNote": "At least ONE API key is required for AI features. Add to your project's .env.local",
+  "route": "/uwu-canvas",
+  "setup": "node <path-to>/uwu-canvas/setup.mjs"
+}

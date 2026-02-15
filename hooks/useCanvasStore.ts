@@ -355,6 +355,7 @@ export const useCanvasStore = create<CanvasStore>()(
     }
     const id = generateId();
 
+    const isMedia = fileData.fileType.startsWith('image/') || fileData.fileType.startsWith('video/');
     const newNode: CanvasNode = {
       id,
       type: 'content',
@@ -363,8 +364,8 @@ export const useCanvasStore = create<CanvasStore>()(
         type: 'content',
         alias: `${ALIAS_PREFIXES.content}-${newCount}`,
         fileData,
-        width: BOX_DEFAULTS.content.width,
-        height: BOX_DEFAULTS.content.height,
+        width: isMedia ? 400 : BOX_DEFAULTS.content.width,
+        height: isMedia ? 350 : BOX_DEFAULTS.content.height,
       } as ContentNodeData,
     };
 

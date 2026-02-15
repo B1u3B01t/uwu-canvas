@@ -1,1 +1,4 @@
 .next/
+
+# User-modified files (component registry changes are local to each project)
+lib/registry.ts

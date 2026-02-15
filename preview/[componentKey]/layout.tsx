@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import '@/app/globals.css';
+// Host app's root layout provides global styles (Tailwind, etc.)
 import { parseReactGrabClipboard } from '../../lib/reactGrabBridge';
 import { generateDynamicComponentPrompt } from '../../lib/promptTemplates';
 import { REACT_GRAB_CONFIG } from '../../lib/constants';

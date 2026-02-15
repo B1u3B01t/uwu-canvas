@@ -24,7 +24,7 @@ async function findJsonFiles(dir: string, baseDir: string, fileList: string[] = 
 
 export async function GET() {
   try {
-    const dataDir = join(process.cwd(), 'app', 'data');
+    const dataDir = process.env.UWU_DATA_DIR || join(process.cwd(), 'data', 'uwu-canvas');
     if (!existsSync(dataDir)) {
       return NextResponse.json({ files: [] });
     }
