@@ -20,6 +20,7 @@ import { AutocompleteTextarea } from '../ui/Autocomplete';
 import { Toggle } from '../ui/toggle';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { FONT_SIZES } from '../../lib/constants';
+import { isCuratedModel } from '../../lib/curatedModels';
 import type { GeneratorNodeData, AIProvider, ModelCapability, OutputMode } from '../../lib/types';
 
 interface ProviderData {
@@ -53,6 +54,7 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
   const [isLoadingProviders, setIsLoadingProviders] = useState(!providersFetched);
   const [copied, setCopied] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
+  const [showAllModels, setShowAllModels] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
   const prevIsRunningRef = useRef(false);
 
@@ -463,32 +465,62 @@ function GeneratorBoxComponent({ id, selected }: NodeProps) {
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px] overflow-y-auto min-w-[180px] rounded-2xl border-zinc-100 shadow-2xl">
-                      {providerKeys.map((pKey) => (
-                        <SelectGroup key={pKey}>
-                          <SelectLabel className="px-3 py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                            {providersData[pKey].name}
-                          </SelectLabel>
-                          {providersData[pKey].models.map((m) => (
-                            <SelectItem
-                              key={`${pKey}:${m.id}`}
-                              value={`${pKey}:${m.id}`}
-                              className="text-[13px] py-2.5 pl-4 rounded-lg focus:bg-zinc-50"
-                            >
-                              <span className="inline-flex items-center gap-2 w-full">
-                                <span className="flex-1">{m.name}</span>
-                                <span className="inline-flex items-center gap-0.5 flex-shrink-0">
-                                  {m.capabilities?.includes('image') && (
-                                    <ImageIcon className="h-3 w-3 text-zinc-400" />
-                                  )}
-                                  {m.capabilities?.includes('component') && (
-                                    <Code2 className="h-3 w-3 text-zinc-400" />
-                                  )}
+                      {/* <div
+                        className="flex items-center justify-end gap-2 px-3 py-2.5 border-b border-zinc-200 bg-zinc-50/80"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <label
+                          htmlFor="show-all-models-toggle"
+                          className="text-[11px] text-zinc-600 cursor-pointer whitespace-nowrap select-none"
+                        >
+                          Show all models
+                        </label>
+                        <Toggle
+                          id="show-all-models-toggle"
+                          pressed={showAllModels}
+                          onPressedChange={setShowAllModels}
+                          size="sm"
+                          aria-label="Show all models"
+                          className="h-5 min-w-[2rem] px-1 rounded-full border border-zinc-300 bg-zinc-100 data-[state=on]:bg-zinc-300 data-[state=on]:border-zinc-400"
+                        />
+                      </div> */}
+                      {providerKeys.map((pKey) => {
+                        const allModels = providersData[pKey].models;
+                        const models = showAllModels
+                          ? allModels
+                          : allModels.filter(
+                              (m) =>
+                                isCuratedModel(pKey, m.id) ||
+                                m.id === currentModel
+                            );
+                        return (
+                          <SelectGroup key={pKey}>
+                            <SelectLabel className="px-3 py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                              {providersData[pKey].name}
+                            </SelectLabel>
+                            {models.map((m) => (
+                              <SelectItem
+                                key={`${pKey}:${m.id}`}
+                                value={`${pKey}:${m.id}`}
+                                className="text-[13px] py-2.5 pl-4 rounded-lg focus:bg-zinc-50"
+                              >
+                                <span className="inline-flex items-center gap-2 w-full">
+                                  <span className="flex-1">{m.name}</span>
+                                  <span className="inline-flex items-center gap-0.5 flex-shrink-0">
+                                    {m.capabilities?.includes('image') && (
+                                      <ImageIcon className="h-3 w-3 text-zinc-400" />
+                                    )}
+                                    {m.capabilities?.includes('component') && (
+                                      <Code2 className="h-3 w-3 text-zinc-400" />
+                                    )}
+                                  </span>
                                 </span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

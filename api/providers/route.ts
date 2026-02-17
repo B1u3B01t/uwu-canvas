@@ -148,6 +148,5 @@ export async function GET() {
   }
 
   await Promise.all(promises);
-
   return NextResponse.json({ providers: availableProviders });
 }
