@@ -1,16 +1,36 @@
-# UWU Canvas
+# UWU Canvas — Visual AI Node Canvas for Next.js
 
-A visual AI-powered canvas for building and testing UI components with real-time data generation. UWU Canvas is a modular add-on that can be integrated into any Next.js application.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-14%2B-black)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-blue)](https://www.typescriptlang.org)
+
+**UWU Canvas** is an open-source, visual node-based AI canvas that you can drop into any **Next.js** app. Build, test, and iterate on UI components using real-time AI-generated data — powered by **OpenAI**, **Anthropic (Claude)**, and **Google Gemini**.
+
+> Think of it as a personal AI data playground: wire up prompts, connect outputs to your components, and preview them live — all inside a drag-and-drop canvas.
+
+![UWU Canvas Demo](<!-- add a screenshot or gif here -->)
+
+## Why UWU Canvas?
+
+- **No separate tool to install** — it lives inside your existing Next.js app at `/uwu-canvas`
+- **Multi-provider AI support** — switch between OpenAI GPT, Anthropic Claude, and Google Gemini in one click
+- **Real data pipelines** — pipe AI output directly into your app's JSON data files
+- **Live component previews** — see your registered React components update in real time with AI-generated content
+- **File-aware AI** — drag in images, PDFs, and documents for multimodal prompts
+
+---
 
 ## Features
 
-- **Visual Node-Based Editor**: Drag-and-drop canvas powered by React Flow
-- **Multi-Provider AI Generation**: Supports OpenAI, Anthropic, and Google AI
-- **Component Preview**: Live preview of registered components in mobile/laptop modes
-- **Data Pipeline**: Connect AI outputs directly to JSON data files
-- **File Support**: Drag and drop images, PDFs, and documents for AI processing
-- **Alias References**: Reference node outputs using `@alias` syntax
-- **Auto-Persistence**: Canvas state automatically saved to localStorage
+- **Visual Node-Based Editor** — drag-and-drop canvas powered by [React Flow](https://reactflow.dev)
+- **Multi-Provider AI Generation** — OpenAI, Anthropic, and Google AI via the Vercel AI SDK
+- **Component Preview** — live preview of registered components in mobile (390×844) and laptop (1280×720) modes
+- **Data Pipeline** — connect AI outputs directly to JSON data files in your app
+- **File Support** — drag and drop images, PDFs, Word docs, and more for AI processing
+- **Alias References** — reference node outputs using `@alias` syntax in prompts
+- **Auto-Persistence** — canvas state automatically saved to `localStorage`
+
+---
 
 ## Installation
 
@@ -21,7 +41,6 @@ A visual AI-powered canvas for building and testing UI components with real-time
 - Tailwind CSS
 
 ### Required Dependencies
-
 ```bash
 npm install zustand @xyflow/react ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
 npm install @radix-ui/react-select @radix-ui/react-dropdown-menu @radix-ui/react-tooltip @radix-ui/react-popover
@@ -30,31 +49,26 @@ npm install lucide-react clsx tailwind-merge
 
 ### Setup
 
-1. Copy the `uwu-canvas` folder to your Next.js app's `app/` directory:
-
+1. Copy the `uwu-canvas` folder into your Next.js app's `app/` directory:
 ```
 your-app/
   app/
-    uwu-canvas/       <- Copy here
-    data/             <- Create this folder for JSON outputs
+    uwu-canvas/       ← copy here
+    data/             ← create this for JSON outputs
 ```
 
-2. Add environment variables to `.env.local`:
-
+2. Add your AI provider keys to `.env.local` (at least one required):
 ```env
-# At least one of these is required
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 GOOGLE_GENERATIVE_AI_API_KEY=...
 ```
 
-3. Visit `/uwu-canvas` in your browser to access the canvas.
+3. Start your dev server and visit `/uwu-canvas`.
 
-## Usage
+---
 
-### Node Types
-
-UWU Canvas has four node types:
+## Node Types
 
 | Node | Purpose | Icon |
 |------|---------|------|
@@ -63,54 +77,42 @@ UWU Canvas has four node types:
 | **Component** | Preview registered React components | Layout |
 | **Data2UI** | Write AI output to JSON files | Database |
 
-### Creating Nodes
+---
 
-1. Click the toolbar buttons at the top of the canvas
-2. Nodes appear in the center of the viewport
-3. Drag nodes to reposition them
-4. Resize nodes using the corner handles when selected
+## Usage
 
-### Using Aliases
+### Alias References
 
-Every node has an alias (e.g., `@output-1`, `@con-1`). Reference other nodes in Generator prompts:
-
+Every node gets an alias (e.g., `@output-1`, `@con-1`). Use aliases in Generator prompts to chain nodes:
 ```
 Analyze this image: @con-1
-Based on @output-1, generate a summary.
+Based on @output-1, generate a marketing summary.
 ```
 
 ### AI Generation Workflow
 
 1. Create a **Content** node with your input (text or file)
-2. Create a **Generator** node
-3. Reference the content: `Describe this: @con-1`
-4. Click the play button to run
-5. Output streams in real-time
+2. Create a **Generator** node with a prompt referencing the content
+3. Click ▶ to run — output streams in real time
 
-### Data Pipeline
+### Data Pipeline (AI → JSON → Component)
 
-Connect AI outputs to your app's data:
-
-1. Create a **Generator** that outputs JSON
-2. Create a **Data2UI** node
-3. Select the generator as source
-4. Select the output JSON file
-5. Click "Apply" (or it auto-applies when generator finishes)
+1. Create a **Generator** that outputs valid JSON
+2. Create a **Data2UI** node, select the generator as source
+3. Select the output JSON file in your `app/data/` folder
+4. Click **Apply** — your component re-renders with live data
 
 ### Component Preview
 
-Preview your React components in the canvas:
+1. Register your components in `lib/registry.ts`
+2. Create a **Component** node and select your component
+3. Toggle between mobile and laptop viewport sizes
 
-1. Register components in `lib/registry.ts`
-2. Create a **Component** node
-3. Select your component from the dropdown
-4. Toggle between mobile (390x844) and laptop (1280x720) views
+---
 
 ## Registering Components
-
-Edit `lib/registry.ts` to add your components:
-
-```typescript
+```ts
+// lib/registry.ts
 import { MyComponent } from '@/app/my-app/MyComponent';
 
 export const componentRegistry: Record<string, RegistryEntry> = {
@@ -123,31 +125,33 @@ export const componentRegistry: Record<string, RegistryEntry> = {
 };
 ```
 
-**Warning**: Never register the `/uwu-canvas` page itself - this causes an infinite loop.
+> ⚠️ Never register the `/uwu-canvas` page itself — this causes an infinite render loop.
+
+---
 
 ## File Support
 
-Drag and drop files directly onto the canvas:
-
-| Type | Supported Formats |
-|------|-------------------|
+| Type | Formats |
+|------|---------|
 | Images | PNG, JPG, GIF, WebP, SVG |
 | Documents | PDF, Word, Excel |
-| Text | TXT, JSON, Markdown, Code files |
+| Text | TXT, JSON, Markdown, code files |
 | Audio | MP3, WAV, OGG |
 
-Files are converted to base64 and sent to AI providers that support multimodal input.
+Files are converted to base64 and sent to multimodal-capable AI providers.
 
-## API Endpoints
+---
 
-The canvas includes these API routes:
+## API Routes
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/uwu-canvas/api/generate` | POST | Stream AI responses |
-| `/uwu-canvas/api/providers` | GET | List available AI providers/models |
+| `/uwu-canvas/api/providers` | GET | List available AI providers & models |
 | `/uwu-canvas/api/list-json-files` | GET | List JSON files in `/app/data/` |
 | `/uwu-canvas/api/write-json` | POST | Write JSON to `/app/data/` |
+
+---
 
 ## Keyboard Shortcuts
 
@@ -155,40 +159,32 @@ The canvas includes these API routes:
 |-----|--------|
 | `Delete` / `Backspace` | Delete selected node |
 | Scroll | Pan canvas |
-| Pinch/Scroll + Ctrl | Zoom |
+| `Ctrl` + Scroll / Pinch | Zoom |
 
-## Persistence
-
-Canvas state (nodes, positions, settings) is automatically saved to localStorage under the key `uwu-canvas-storage`. The canvas reloads your last state on refresh.
+---
 
 ## Customization
 
 ### CSS Variables
 
-Override colors in your global CSS:
-
+Override node accent colors in your global CSS:
 ```css
 :root {
   --accent-generator: oklch(0.65 0.18 250);
-  --accent-content: oklch(0.65 0.18 160);
+  --accent-content:   oklch(0.65 0.18 160);
   --accent-component: oklch(0.65 0.18 290);
-  --accent-data2ui: oklch(0.65 0.18 45);
+  --accent-data2ui:   oklch(0.65 0.18 45);
 }
 ```
 
 ### Constants
 
-Modify `lib/constants.ts` to change:
-- Default node sizes
-- Alias prefixes
-- Canvas zoom limits
-- Background styling
+Modify `lib/constants.ts` to customize default node sizes, alias prefixes, zoom limits, and background styling.
+
+---
 
 ## Exports
-
-Import from `uwu-canvas/index.ts`:
-
-```typescript
+```ts
 import {
   Canvas,
   Toolbar,
@@ -201,25 +197,26 @@ import {
 } from '@/app/uwu-canvas';
 ```
 
+---
+
 ## Troubleshooting
 
-### No AI Providers Available
-- Check that at least one API key is set in `.env.local`
-- Restart the dev server after adding keys
+**No AI providers available** → Check that at least one API key is in `.env.local` and restart the dev server.
 
-### Components Not Showing
-- Verify the component is registered in `lib/registry.ts`
-- Check the import path is correct
-- Ensure the component has a default export
+**Components not showing** → Verify the component is registered in `lib/registry.ts` with a correct import path and default export.
 
-### File Drop Not Working
-- Check file type is supported
-- Verify file size isn't too large (100MB+ may cause issues)
+**File drop not working** → Check the file type is supported and the file is under ~100MB.
 
-### Canvas State Lost
-- Check localStorage isn't disabled
-- Check for storage quota errors in console
+**Canvas state lost** → Check that `localStorage` is enabled and not over quota in your browser console.
+
+---
 
 ## License
 
-MIT
+MIT — free to use, modify, and distribute.
+
+---
+
+## Contributing
+
+PRs and issues welcome! See [ARCHITECTURE.md](ARCHITECTURE.md) for a deep-dive into how the canvas is structured.
